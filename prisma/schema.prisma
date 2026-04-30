@@ -1,0 +1,582 @@
+// PhoneShop Prisma Schema Draft
+// 실제 구현 시 사용하는 Prisma/DB 버전에 맞춰 datasource/provider를 조정한다.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum UserRole {
+  ADMIN
+  STAFF
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum CommonStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum SubscriptionType {
+  NEW
+  CHANGE_DEVICE
+  NUMBER_PORTABILITY
+}
+
+enum SaleStatus {
+  NORMAL
+  HOLD
+  CANCELLED
+}
+
+enum ReceivableStatus {
+  NORMAL
+  PARTIAL
+  OVERDUE
+  COMPLETION_SCHEDULED
+  PAID
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+  ETC
+}
+
+enum InventoryStatus {
+  IN_STOCK
+  RESERVED
+  SOLD
+  DEFECTIVE
+}
+
+enum ScheduleType {
+  SALE
+  PAYMENT
+  MANUAL
+  CONTRACT_EXPIRY
+  INVENTORY
+  CONSULTATION
+}
+
+enum ScheduleStatus {
+  SCHEDULED
+  DONE
+  CANCELLED
+}
+
+enum PolicyStatus {
+  ACTIVE
+  INACTIVE
+  SCHEDULED
+  EXPIRED
+}
+
+model User {
+  id           String     @id @default(cuid())
+  name         String
+  email        String     @unique
+  passwordHash String
+  role         UserRole   @default(STAFF)
+  status       UserStatus @default(ACTIVE)
+  phone        String?
+  storeId      String?
+  store        Store?     @relation(fields: [storeId], references: [id])
+  lastLoginAt  DateTime?
+
+  salesHandled       Sale[]            @relation("SaleStaff")
+  paymentsReceived   Payment[]         @relation("PaymentReceiver")
+  schedulesAssigned  ManualSchedule[]  @relation("ScheduleAssignee")
+  schedulesCreated   ManualSchedule[]  @relation("ScheduleCreator")
+  auditLogs          AuditLog[]        @relation("AuditActor")
+  sessions           Session[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([storeId])
+  @@index([role, status])
+}
+
+model Session {
+  id               String    @id @default(cuid())
+  userId           String
+  sessionTokenHash String    @unique
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  ipAddress        String?
+  userAgent        String?
+  user             User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+}
+
+model Store {
+  id      String       @id @default(cuid())
+  code    String       @unique
+  name    String
+  phone   String?
+  address String?
+  status  CommonStatus @default(ACTIVE)
+
+  users          User[]
+  inventoryItems InventoryItem[]
+  sales          Sale[]
+  receivables    Receivable[]
+  payments       Payment[]
+  schedules      ManualSchedule[]
+  customers      Customer[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Carrier {
+  id     String       @id @default(cuid())
+  code   String       @unique
+  name   String
+  status CommonStatus @default(ACTIVE)
+
+  salesAgencies SalesAgency[]
+  ratePlans     RatePlan[]
+  addOnServices AddOnService[]
+  inventory     InventoryItem[]
+  sales         Sale[]
+
+  saleProfitPolicies       SaleProfitPolicy[]
+  staffCommissionPolicies  StaffCommissionPolicy[]
+  discountPolicies         DiscountPolicy[]
+  activationRules          CarrierActivationRule[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SalesAgency {
+  id             String       @id @default(cuid())
+  name           String
+  carrierId      String?
+  carrier        Carrier?     @relation(fields: [carrierId], references: [id])
+  contactName    String?
+  phone          String?
+  contractStatus String?
+  status         CommonStatus @default(ACTIVE)
+
+  sales Sale[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([carrierId])
+  @@index([status])
+}
+
+model DeviceModel {
+  id           String       @id @default(cuid())
+  name         String
+  modelNo      String
+  manufacturer String
+  releaseDate  DateTime?
+  supports5g   Boolean      @default(true)
+  imageUrl     String?
+  status       CommonStatus @default(ACTIVE)
+
+  inventoryItems InventoryItem[]
+  sales          Sale[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@index([modelNo])
+  @@unique([manufacturer, modelNo])
+}
+
+model InventoryColorOption {
+  id      String       @id @default(cuid())
+  name    String
+  code    String?
+  hex     String?
+  status  CommonStatus @default(ACTIVE)
+
+  inventoryItems InventoryItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([name])
+}
+
+model RatePlan {
+  id           String       @id @default(cuid())
+  carrierId    String
+  carrier      Carrier      @relation(fields: [carrierId], references: [id])
+  name         String
+  monthlyFee   Int
+  description  String?
+  status       CommonStatus @default(ACTIVE)
+
+  sales Sale[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([carrierId, status])
+}
+
+model AddOnService {
+  id          String       @id @default(cuid())
+  carrierId   String?
+  carrier     Carrier?     @relation(fields: [carrierId], references: [id])
+  name        String
+  monthlyFee  Int          @default(0)
+  description String?
+  status      CommonStatus @default(ACTIVE)
+
+  saleAddOns SaleAddOn[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([carrierId, status])
+}
+
+model InventoryItem {
+  id             String          @id @default(cuid())
+  storeId        String
+  store          Store           @relation(fields: [storeId], references: [id])
+  carrierId      String
+  carrier        Carrier         @relation(fields: [carrierId], references: [id])
+  deviceModelId  String
+  deviceModel    DeviceModel     @relation(fields: [deviceModelId], references: [id])
+  colorOptionId  String?
+  colorOption    InventoryColorOption? @relation(fields: [colorOptionId], references: [id])
+
+  capacity       String
+  serialNumber   String
+  modelNo        String
+  purchasePrice  Int
+  status         InventoryStatus @default(IN_STOCK)
+  receivedAt     DateTime
+  assignedUserId String?
+  memo           String?
+
+  sale           Sale?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([serialNumber])
+  @@index([modelNo])
+  @@index([storeId, status])
+  @@index([carrierId])
+  @@index([deviceModelId])
+}
+
+model Customer {
+  id             String  @id @default(cuid())
+  name           String
+  phone          String
+  birthDate      DateTime?
+  email          String?
+  address        String?
+  customerGrade  String?
+  identityType   String?
+  identityMasked String?
+  storeId        String?
+  store          Store?   @relation(fields: [storeId], references: [id])
+  assignedUserId String?
+
+  sales       Sale[]
+  receivables Receivable[]
+  schedules   ManualSchedule[]
+  memos       CustomerMemo[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([phone])
+  @@index([name])
+  @@index([storeId])
+}
+
+model Sale {
+  id               String           @id @default(cuid())
+  orderNo          String           @unique
+
+  customerId       String
+  customer         Customer         @relation(fields: [customerId], references: [id])
+  storeId          String
+  store            Store            @relation(fields: [storeId], references: [id])
+  staffId          String
+  staff            User             @relation("SaleStaff", fields: [staffId], references: [id])
+
+  carrierId        String
+  carrier          Carrier          @relation(fields: [carrierId], references: [id])
+  salesAgencyId    String?
+  salesAgency      SalesAgency?     @relation(fields: [salesAgencyId], references: [id])
+
+  inventoryItemId  String?          @unique
+  inventoryItem    InventoryItem?   @relation(fields: [inventoryItemId], references: [id])
+  deviceModelId    String
+  deviceModel      DeviceModel      @relation(fields: [deviceModelId], references: [id])
+
+  subscriptionType SubscriptionType
+  ratePlanId       String?
+  ratePlan         RatePlan?        @relation(fields: [ratePlanId], references: [id])
+  contractMonths   Int              @default(24)
+
+  devicePrice       Int             @default(0)
+  discountAmount    Int             @default(0)
+  saleAmount        Int             @default(0)
+  upfrontAmount     Int             @default(0)
+  installmentAmount Int             @default(0)
+  receivableAmount  Int             @default(0)
+
+  status           SaleStatus       @default(NORMAL)
+  soldAt           DateTime
+  memo             String?
+
+  receivable       Receivable?
+  schedules        ManualSchedule[]
+  addOns           SaleAddOn[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([soldAt])
+  @@index([storeId])
+  @@index([staffId])
+  @@index([carrierId])
+  @@index([customerId])
+}
+
+model SaleAddOn {
+  id             String @id @default(cuid())
+  saleId         String
+  sale           Sale   @relation(fields: [saleId], references: [id])
+  addOnServiceId String
+  addOnService   AddOnService @relation(fields: [addOnServiceId], references: [id])
+
+  monthlyFeeSnapshot Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@unique([saleId, addOnServiceId])
+}
+
+model Receivable {
+  id              String           @id @default(cuid())
+  saleId          String?          @unique
+  sale            Sale?            @relation(fields: [saleId], references: [id])
+  customerId      String
+  customer        Customer         @relation(fields: [customerId], references: [id])
+  storeId         String
+  store           Store            @relation(fields: [storeId], references: [id])
+  assignedUserId  String?
+
+  principalAmount Int
+  paidAmount      Int              @default(0)
+  balanceAmount   Int
+  dueDate         DateTime
+  status          ReceivableStatus @default(NORMAL)
+  lastPaymentAt   DateTime?
+  memo            String?
+
+  payments  Payment[]
+  schedules ManualSchedule[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([dueDate])
+  @@index([status])
+  @@index([customerId])
+  @@index([storeId])
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  receivableId  String
+  receivable    Receivable    @relation(fields: [receivableId], references: [id])
+  storeId       String
+  store         Store         @relation(fields: [storeId], references: [id])
+  receivedById  String
+  receivedBy    User          @relation("PaymentReceiver", fields: [receivedById], references: [id])
+
+  amount        Int
+  method        PaymentMethod
+  paidAt        DateTime
+  memo          String?
+  cancelledAt   DateTime?
+  cancelReason  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([paidAt])
+  @@index([receivableId])
+  @@index([receivedById])
+}
+
+model ManualSchedule {
+  id             String         @id @default(cuid())
+  title          String
+  type           ScheduleType
+  status         ScheduleStatus @default(SCHEDULED)
+  startsAt       DateTime
+  endsAt         DateTime?
+  storeId        String?
+  store          Store?         @relation(fields: [storeId], references: [id])
+  assignedUserId String?
+  assignedUser   User?          @relation("ScheduleAssignee", fields: [assignedUserId], references: [id])
+  createdById    String?
+  createdBy      User?          @relation("ScheduleCreator", fields: [createdById], references: [id])
+
+  customerId     String?
+  customer       Customer?      @relation(fields: [customerId], references: [id])
+  saleId         String?
+  sale           Sale?          @relation(fields: [saleId], references: [id])
+  receivableId   String?
+  receivable     Receivable?    @relation(fields: [receivableId], references: [id])
+
+  memo           String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([startsAt])
+  @@index([type])
+  @@index([assignedUserId])
+  @@index([storeId])
+}
+
+model CustomerMemo {
+  id          String   @id @default(cuid())
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id])
+  title       String
+  body        String
+  createdById String?
+  createdAt  DateTime @default(now())
+
+  @@index([customerId])
+  @@index([createdAt])
+}
+
+model SaleProfitPolicy {
+  id               String       @id @default(cuid())
+  name             String
+  carrierId         String?
+  carrier           Carrier?     @relation(fields: [carrierId], references: [id])
+  subscriptionType  SubscriptionType?
+  status            PolicyStatus @default(INACTIVE)
+  version           String
+  effectiveFrom     DateTime
+  effectiveTo       DateTime?
+  priority          Int          @default(100)
+  ruleJson          Json
+
+  createdById       String?
+  updatedById       String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([carrierId, status])
+  @@index([effectiveFrom, effectiveTo])
+}
+
+model StaffCommissionPolicy {
+  id               String       @id @default(cuid())
+  name             String
+  carrierId         String?
+  carrier           Carrier?     @relation(fields: [carrierId], references: [id])
+  status            PolicyStatus @default(INACTIVE)
+  version           String
+  effectiveFrom     DateTime
+  effectiveTo       DateTime?
+  priority          Int          @default(100)
+  ruleJson          Json
+
+  createdById       String?
+  updatedById       String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([carrierId, status])
+}
+
+model DiscountPolicy {
+  id               String       @id @default(cuid())
+  name             String
+  carrierId         String?
+  carrier           Carrier?     @relation(fields: [carrierId], references: [id])
+  deviceModelId     String?
+  status            PolicyStatus @default(INACTIVE)
+  version           String
+  effectiveFrom     DateTime
+  effectiveTo       DateTime?
+  priority          Int          @default(100)
+  ruleJson          Json
+
+  createdById       String?
+  updatedById       String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([carrierId, status])
+  @@index([deviceModelId])
+}
+
+model CarrierActivationRule {
+  id               String       @id @default(cuid())
+  name             String
+  carrierId         String
+  carrier           Carrier      @relation(fields: [carrierId], references: [id])
+  status            PolicyStatus @default(INACTIVE)
+  version           String
+  effectiveFrom     DateTime
+  effectiveTo       DateTime?
+  priority          Int          @default(100)
+  ruleJson          Json
+
+  createdById       String?
+  updatedById       String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([carrierId, status])
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  actorUserId  String?
+  actor        User?    @relation("AuditActor", fields: [actorUserId], references: [id])
+  action       String
+  entityType   String
+  entityId     String?
+  beforeJson   Json?
+  afterJson    Json?
+  reason       String?
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorUserId])
+  @@index([entityType, entityId])
+}
