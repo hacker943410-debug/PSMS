@@ -1,83 +1,99 @@
 # Model Routing
 
-## 기본 원칙
+작성일: 2026-05-01
 
-PSMS는 인증, DB transaction, 수납/재고/정책 정합성이 중요한 업무 시스템이다. 모델 라우팅은 속도보다 구조 보존과 데이터 정합성을 우선한다.
+## Principle
 
-판단이 애매하면 GPT-5.5를 사용한다.
+PSMS는 휴대폰 매장 운영 시스템이다. 인증, 권한, 금액, 재고, 수납, 정책, 감사 로그의 정합성이 UI 속도보다 중요하다. 판단이 애매하면 더 강한 모델과 더 좁은 변경 범위를 선택한다.
 
-## GPT-5.5 사용 기준
+## GPT-5.5
 
-다음 작업은 GPT-5.5를 사용한다.
+다음 작업은 GPT-5.5 수준의 설계/검토가 필요하다.
 
-- 시스템 아키텍처 결정
-- 인증, 세션, RBAC
-- Prisma schema, migration, seed 전략
+- workspace 구조와 Web/API/Desktop 경계 변경
+- Fastify API contract, shared Zod schema, `ActionResult` 변경
+- auth/session/RBAC/password/cookie
+- Prisma schema, migration, seed, index
 - 판매 등록 transaction
-- 수납 등록/취소 및 미수금 잔액 재계산
-- 재고 상태 전환과 중복 판매 방지
-- 정책 활성화, 정책 충돌 검증
-- API contract 및 `ActionResult` 변경
+- 수납 등록/취소와 receivable balance 계산
+- 재고 상태 전환과 S/N unique 보장
+- 정책 계산, 정책 활성화, 정책 충돌 검증
 - Export 권한, Audit Log
+- Electron userData DB, preload IPC, renderer isolation
 - 보안/개인정보/권한 리뷰
-- 최종 통합 리뷰
+- 릴리즈 전 최종 리뷰
 
-## Spark 사용 기준
+## Codex Spark
 
-Spark는 빠른 UI/단순 작업 전용이다.
+Spark는 빠른 UI 반복과 기계적 정리에만 사용한다.
 
 사용 가능:
 
-- WorkspaceShell, Sidebar, PageIntro 등 presentational UI 초안
+- `apps/web` presentational component skeleton
 - Tailwind class 정리
-- 정적 table, empty/loading/error state 마크업
-- 디자인 reference 기반 spacing/color 보정
+- 정적 table, empty/loading/error state markup
+- 기준 PNG 기반 spacing/color 1차 보정
+- demo/dummy data 화면 구성
 - 문서 포맷 정리
-- 반복적인 import 정리
-- 낮은 위험의 story/demo/dummy data 작성
+- 반복 import 정리
 
 사용 금지:
 
+- `apps/api`
+- `packages/db`
+- `packages/shared`의 auth/session/password/token/rule 파일
+- Web auth/session Server Action adapter
+- Electron runtime/packaging
 - auth/session/RBAC
-- password hash/cookie
+- Fastify API contract
 - Prisma schema/migration/seed
 - DB transaction
-- Server Action contract
-- 수납/미수금 계산
-- 재고 중복 판매 방지
-- 정책 계산/활성화
+- 판매/미수금/수납/재고/정책 계산
 - Export 권한/Audit Log
-- 배포, CI, secret, env 정책
+- CI, release, secret, env 정책
 
-## mini 사용 기준
+## Mini
 
-mini는 작고 낮은 위험의 보조 작업에 사용한다.
+Mini는 작고 위험도가 낮은 보조 작업에 사용한다.
 
 - 코드베이스 구조 매핑
 - 문서 요약
 - 변경 파일 목록화
 - 작업 완료 보고 초안
 - 단순 helper/test scaffold
+- Playwright screenshot 수집 보조
 
-mini도 auth, DB, API contract 변경에는 사용하지 않는다.
+Mini는 auth, DB, API contract, money/inventory/payment/policy 변경에 사용하지 않는다.
 
-## 라우팅 우선순위
+## Codex Code Review
 
-1. 보안/돈/DB/권한이 있으면 GPT-5.5
-2. route-aware frontend나 URL Search Params 흐름이 있으면 GPT-5.5 frontend
-3. 순수 UI 마크업만 있으면 Spark
-4. 문서/작은 보조 작업이면 mini
-5. 판단이 애매하면 GPT-5.5
+`gpt-5.3-codex` code review profile은 diff 기반 리뷰에 사용한다.
+
+- 큰 구조 변경 이후 회귀 확인
+- Web/API contract 연결 오류 확인
+- 테스트 누락, build 위험, import/path 오류 확인
+- 릴리즈 전 read-only 코드 리뷰
+
+## Priority
+
+1. 보안, DB, 권한, 금액, 재고, 수납, 정책, API contract가 있으면 GPT-5.5
+2. route-aware frontend나 API adapter가 있으면 GPT-5.5 frontend 경로
+3. 순수 UI markup이면 Spark
+4. 스크린샷/콘솔/네트워크 수집이면 UI validation 경로
+5. 문서/요약/파일 매핑이면 Mini
+6. 릴리즈/Electron이면 GPT-5.5 release 경로
 
 ## Spark Escalation
 
-Spark 작업 중 아래 영역이 보이면 즉시 중단하고 상위 agent로 전환한다.
+Spark 작업 중 아래 영역이 보이면 즉시 상위 경로로 전환한다.
 
-| 조건                       | Escalation 대상                        |
-| -------------------------- | -------------------------------------- |
-| 인증/권한 변경             | `security_reviewer`                    |
-| DB schema/migration/seed   | `db_reviewer`                          |
-| API contract 변경          | `architect_reviewer`                   |
-| Server Action 변경         | `backend_agent`                        |
-| 수납/미수금/재고/정책 로직 | `backend_agent` + `architect_reviewer` |
-| 보안 민감 파일             | `security_reviewer`                    |
+| 조건                           | 전환 대상                              |
+| ------------------------------ | -------------------------------------- |
+| auth/session/RBAC 변경         | `security_reviewer`                    |
+| DB schema/migration/seed       | `db_reviewer`                          |
+| API contract 변경              | `architect_reviewer`                   |
+| Fastify route/service 구현     | `backend_agent`                        |
+| Web Server Action adapter 변경 | `frontend_agent` + `backend_agent`     |
+| 판매/미수금/재고/정책 로직     | `backend_agent` + `architect_reviewer` |
+| Electron runtime/packaging     | `desktop_release_agent`                |
+| 릴리즈/env/port 정책           | `devops_sre_reviewer`                  |

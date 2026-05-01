@@ -1,48 +1,47 @@
 # Agent Map
 
-## 사용할 Subagent
+작성일: 2026-05-01
 
-| Agent                  | Model                 | Reasoning | Sandbox         | 책임 범위                                                | 사용 조건                    |
-| ---------------------- | --------------------- | --------- | --------------- | -------------------------------------------------------- | ---------------------------- |
-| `codebase_mapper`      | `gpt-5.4-mini`        | medium    | read-only       | 구조 탐색, 파일 매핑                                     | 작업 전 빠른 현황 파악       |
-| `architect_reviewer`   | `gpt-5.5`             | high      | read-only       | 아키텍처, API contract, 라우팅, 계층 구조                | 설계/충돌/contract 판단      |
-| `security_reviewer`    | `gpt-5.5`             | high      | read-only       | 인증, 세션, RBAC, 개인정보, Export 권한                  | auth/security 변경 또는 검토 |
-| `db_reviewer`          | `gpt-5.5`             | high      | read-only       | Prisma, migration, seed, index, DB 정합성                | DB 관련 변경 검토            |
-| `backend_agent`        | `gpt-5.5`             | high      | workspace-write | Server Action, query, service, repository, business rule | 서버/도메인 구현             |
-| `frontend_agent`       | `gpt-5.5`             | medium    | workspace-write | App Router page, URL Search Params, Drawer routing       | route-aware frontend 구현    |
-| `spark_ui_iterator`    | `gpt-5.3-codex-spark` | medium    | workspace-write | 순수 UI skeleton, Tailwind, 정적 컴포넌트                | auth/DB/API 없는 UI 작업     |
-| `qa_agent`             | `gpt-5.5`             | high      | workspace-write | 테스트 전략, 회귀 검증, 인수 기준                        | 기능 완료 전 검증            |
-| `docs_release_manager` | `gpt-5.4-mini`        | medium    | workspace-write | 문서, 보고서, 상태 문서 갱신                             | 결과 보고/문서 정리          |
+이 문서는 `C:\Project\AI_Harness`를 PSMS 현재 구조에 맞게 반영한 에이전트 라우팅 기준이다. 실제 subagent 실행 여부는 현재 작업 환경과 사용자 지시에 따른다. 실행하지 않는 경우에도 아래 표를 작업 분해, 리뷰 관점, 완료 기준 체크리스트로 사용한다.
 
-## 제거한 Subagent
+## Active Agents
 
-| 제거 대상               | 제거 이유                                                       |
-| ----------------------- | --------------------------------------------------------------- |
-| `product_planner`       | 제품 요구사항 문서가 이미 별도 패키지에 충분히 존재             |
-| `project_manager`       | 현재는 구현 전 문서/하네스 세팅 단계이며 별도 일정 agent 불필요 |
-| `ai_integration_agent`  | OpenAI API/RAG/moderation 기능은 MVP 범위 아님                  |
-| `mobile_agent`          | 모바일 전용 UX는 초기 MVP 제외                                  |
-| `devops_sre_reviewer`   | 배포/인프라는 초기 하네스 적용 범위 밖                          |
-| `release_reviewer`      | 릴리즈 단계 아님                                                |
-| `visual_asset_designer` | 이미지/시안 생성은 현재 범위 아님                               |
-| `visual_ui_reviewer`    | UI 구현 후 필요 시 재도입 가능                                  |
-| `ui_runtime_validator`  | Playwright 검증은 `qa_agent`로 통합                             |
-| `code_reviewer`         | 일반 리뷰는 GPT-5.5 agent와 QA로 통합                           |
+| Agent                   | Model                 | Reasoning | Sandbox         | 책임 범위                                                            | 사용 조건                                |
+| ----------------------- | --------------------- | --------- | --------------- | -------------------------------------------------------------------- | ---------------------------------------- |
+| `project_manager`       | `gpt-5.4-mini`        | medium    | workspace-write | 작업 흐름, 단계 분해, 진행 문서                                      | 큰 기능을 여러 게이트로 나눌 때          |
+| `codebase_mapper`       | `gpt-5.4-mini`        | medium    | read-only       | 구조 탐색, 파일 매핑                                                 | 작업 전 빠른 현황 파악                   |
+| `architect_reviewer`    | `gpt-5.5`             | high      | read-only       | workspace 구조, Fastify API contract, Web/API/Desktop 경계           | 구조 변경, contract 변경, 책임 경계 판단 |
+| `security_reviewer`     | `gpt-5.5`             | high      | read-only       | 인증, 세션, RBAC, 개인정보, Export 권한                              | auth/security 변경 또는 검토             |
+| `db_reviewer`           | `gpt-5.5`             | high      | read-only       | Prisma, migration, seed, index, DB 정합성                            | DB 관련 변경 검토                        |
+| `backend_agent`         | `gpt-5.5`             | high      | workspace-write | `apps/api` routes/services/repositories, transaction, business rule  | API/도메인 구현                          |
+| `frontend_agent`        | `gpt-5.5`             | medium    | workspace-write | `apps/web` App Router, UI adapter, URL state, Drawer/Modal/Form      | route-aware frontend 구현                |
+| `spark_ui_iterator`     | `gpt-5.3-codex-spark` | medium    | workspace-write | 순수 UI skeleton, Tailwind, 정적 컴포넌트, 디자인 spacing/color 보정 | auth/DB/API 없이 빠른 UI 반복            |
+| `ui_runtime_validator`  | `gpt-5.4-mini`        | medium    | workspace-write | Playwright 실행, 콘솔/네트워크/스크린샷 수집                         | 화면 구현 후 런타임 QA                   |
+| `visual_ui_reviewer`    | `gpt-5.5`             | high      | read-only       | 기준 PNG 대비 시각 품질 리뷰                                         | 디자인 게이트 판정                       |
+| `qa_agent`              | `gpt-5.5`             | high      | workspace-write | 테스트 전략, 통합 검증, 회귀 확인                                    | 기능 완료 전 검증                        |
+| `code_reviewer`         | `gpt-5.3-codex`       | high      | read-only       | diff 기반 버그/회귀 리뷰                                             | 큰 변경 또는 릴리즈 전 코드 리뷰         |
+| `devops_sre_reviewer`   | `gpt-5.5`             | high      | read-only       | 포트, env, build, 로컬 실행/패키징 위험                              | dev server, CI, release infra 변경       |
+| `desktop_release_agent` | `gpt-5.5`             | high      | workspace-write | Electron local app packaging, userData SQLite, preload IPC           | Web/API MVP와 E2E 통과 후                |
+| `release_reviewer`      | `gpt-5.5`             | high      | read-only       | 릴리즈 체크리스트, smoke, rollback                                   | Electron 또는 배포 전 최종 리뷰          |
+| `docs_release_manager`  | `gpt-5.4-mini`        | medium    | workspace-write | 문서, 보고서, 상태 문서 갱신                                         | 작업 완료 보고/문서 정리                 |
 
-## Agent 경계
+## Boundary Rules
 
-- `spark_ui_iterator`는 `src/server`, `prisma`, auth, API contract 파일을 수정하지 않는다.
-- `frontend_agent`는 route-aware frontend를 담당하지만 auth/session 구현 자체는 수정하지 않는다.
-- `backend_agent`는 Server Action과 service를 구현하되 DB schema와 API contract 변경 시 escalation한다.
-- `db_reviewer`, `security_reviewer`, `architect_reviewer`는 read-only reviewer다.
-- `docs_release_manager`는 구현 코드를 수정하지 않는다.
+- `spark_ui_iterator`는 `apps/api`, `packages/db`, `packages/shared`의 auth/session/password/token/rule 파일, Web auth adapter, Electron runtime 파일을 수정하지 않는다.
+- `frontend_agent`는 Web 화면과 API 호출 adapter를 다루되, API business logic을 Web Server Action으로 가져오지 않는다.
+- `backend_agent`는 Fastify API와 domain service를 구현하되, Prisma schema 변경은 `db_reviewer` 검토가 필요하다.
+- `desktop_release_agent`는 MVP 이후에만 활성화한다. Electron renderer에는 Node 권한을 주지 않고 preload IPC만 허용한다.
+- `visual_ui_reviewer`는 기준 이미지와 screenshot evidence를 검토한다. DOM 동작, auth, API, DB pass/fail은 `ui_runtime_validator`와 `qa_agent`가 확인한다.
+- `docs_release_manager`는 구현 코드를 변경하지 않는다.
 
-## 작업 예정 보고 예시
+## Work Routing Examples
 
-| 세부 작업          | Subagent            | Model                 | 이유                        | 산출물              |
-| ------------------ | ------------------- | --------------------- | --------------------------- | ------------------- |
-| 현 구조 확인       | `codebase_mapper`   | `gpt-5.4-mini`        | 빠른 파일 매핑              | 관련 파일 목록      |
-| 공통 UI skeleton   | `spark_ui_iterator` | `gpt-5.3-codex-spark` | 순수 UI 작업                | 컴포넌트 diff       |
-| URL 필터 page 구현 | `frontend_agent`    | `gpt-5.5`             | route-aware 상태 필요       | page/component diff |
-| Server Action 구현 | `backend_agent`     | `gpt-5.5`             | contract와 transaction 필요 | action/service diff |
-| 검증               | `qa_agent`          | `gpt-5.5`             | 회귀 위험 확인              | 테스트 결과         |
+| 작업                    | 기본 라우팅                                                            | 완료 산출물                                    |
+| ----------------------- | ---------------------------------------------------------------------- | ---------------------------------------------- |
+| 현 구조 파악            | `codebase_mapper`                                                      | 관련 파일/위험 목록                            |
+| API contract 변경       | `architect_reviewer` -> `backend_agent` -> `qa_agent`                  | route/schema/test diff                         |
+| Prisma schema/seed 변경 | `db_reviewer` -> `backend_agent`                                       | migration/seed/validation 결과                 |
+| 화면 skeleton           | `spark_ui_iterator`                                                    | presentational component diff                  |
+| 화면 기능 연결          | `frontend_agent` + `backend_agent`                                     | Web/API 연결 diff                              |
+| 디자인 게이트           | `ui_runtime_validator` -> `visual_ui_reviewer`                         | screenshot, console/network/accessibility 결과 |
+| 릴리즈 준비             | `devops_sre_reviewer` -> `desktop_release_agent` -> `release_reviewer` | Electron smoke와 release checklist             |

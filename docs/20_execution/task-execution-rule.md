@@ -1,93 +1,93 @@
 # Task Execution Rule
 
+작성일: 2026-05-01
+
 ## 기본 실행 흐름
 
-1. MUST READ 파일을 확인한다.
-2. 작업 목표를 재정의한다.
-3. 기능, 위험도, 영향 범위를 분류한다.
-4. subagent 자동 배정을 고려한다.
-5. 작업 예정 보고를 작성한다.
-6. 구현/문서/검증을 수행한다.
-7. subagent별 결과를 수집한다.
-8. 작업 결과 보고를 작성한다.
-9. 다음 작업 5개를 제안한다.
-
-## 자동 Subagent 위임 기준
-
-다음 조건이면 subagent 위임을 자동 고려한다.
-
-- 작업이 2개 이상의 독립 영역으로 나뉜다.
-- UI와 backend가 분리되어 병렬 진행 가능하다.
-- DB schema 검토와 화면 구현이 동시에 필요하다.
-- 문서 정리와 구현 검증을 분리할 수 있다.
-- 코드 탐색과 구현을 분리하면 안전성이 올라간다.
-
-단, 다음 작업은 단일 GPT-5.5 경로로 먼저 설계한다.
-
-- auth/session/RBAC
-- Prisma migration
-- 판매 등록 transaction
-- 수납 취소
-- 정책 활성화
-- API contract 변경
+1. Must Read 문서와 `C:\Project\PSMS_Tech` 관련 기술문서를 확인한다.
+2. 작업 목표를 Web/API/Desktop/DB/문서/디자인/릴리즈 중 하나 이상으로 분류한다.
+3. 영향 범위와 위험도를 확인한다.
+4. 현재 환경과 사용자 지시가 허용하면 subagent 위임을 고려한다. 허용되지 않으면 같은 책임 경계를 직접 적용한다.
+5. 구현 전 변경 범위와 검증 계획을 정한다.
+6. 구현한다.
+7. 포맷, 타입, lint, build, DB, 테스트, UI 검증 중 관련 검증을 실행한다.
+8. 변경 파일, 검증 결과, 남은 위험, 다음 작업을 보고한다.
 
 ## 작업 분해 기준
 
-| 작업 유형   | 분해 방식                                                                |
-| ----------- | ------------------------------------------------------------------------ |
-| 화면 구현   | layout, filter, table, drawer, form으로 분해                             |
-| 도메인 구현 | schema, validation, service, action, query, test로 분해                  |
-| DB 변경     | model, relation, index, migration, seed, regression check로 분해         |
-| 인증        | user model, password hash, session, route guard, menu RBAC, tests로 분해 |
-| Export      | query, permission, file generation, audit log, e2e로 분해                |
-| 문서        | current-state, routing, agent-map, completion report로 분해              |
+| 작업 유형 | 분해 방식                                                                  |
+| --------- | -------------------------------------------------------------------------- |
+| 화면 구현 | design reference, shell, filter, table, drawer, modal, form, responsive QA |
+| API 구현  | route, Zod schema, service, repository, permission, transaction, test      |
+| DB 변경   | model, relation, index, migration, seed, rollback/rehearsal, validation    |
+| 인증      | user model, password hash, session, cookie, route guard, menu RBAC, tests  |
+| Export    | query, permission, file generation, audit log, e2e                         |
+| Electron  | process launch, port check, userData DB, migration, preload IPC, smoke     |
+| 문서      | current-state, routing, validation, release, completion report             |
+
+## 화면 완료 흐름
+
+각 화면은 아래 순서로 완료 처리한다.
+
+```txt
+디자인 정합성 -> API 계약 -> 기능 연결 -> 테스트 -> 스크린샷 QA
+```
+
+- 기준 이미지는 `C:\Project\PSMS_Tech\design-reference`의 PNG다.
+- 먼저 static/seed data로 PNG와 시각 구조를 맞춘다.
+- 그 다음 Fastify API 데이터를 연결한다.
+- 화면별 완료에는 `1586x992`, `1440x900`, `1280x800` screenshot evidence가 필요하다.
 
 ## Spark 사용 범위
 
 Spark 사용 가능:
 
-- 화면 skeleton
+- `apps/web` 화면 skeleton
 - Tailwind 스타일링
 - 공통 presentational 컴포넌트
 - 정적 컬럼 정의
 - Story/demo/dummy data
+- 디자인 reference 기반 spacing/color 1차 보정
 - 문서 포맷 정리
 
 Spark 사용 금지:
 
-- `src/server`
-- `src/lib/auth`
-- `prisma`
+- `apps/api`
+- `packages/db`
+- `packages/shared`의 auth/session/password/token/rule 파일
+- `apps/web/src/server/actions/auth.actions.ts`
+- `apps/web/src/lib/auth`
+- `apps/web/src/lib/api-client.ts`의 API contract 변경
+- `apps/desktop`
 - auth/session/RBAC
-- Server Action contract
+- Fastify API contract
+- Prisma schema/migration/seed
 - payment/receivable/sale transaction
 - policy calculation
 - Audit Log
 - Export permission
+- release/env/port 정책
 
 ## 병렬 작업 금지 조건
 
-- 같은 파일을 여러 agent가 수정해야 하는 경우
-- DB schema와 service가 동시에 확정되지 않은 경우
+- 같은 파일을 여러 작업자가 수정해야 하는 경우
+- DB schema와 service contract가 동시에 확정되지 않은 경우
 - API contract가 아직 미정인 경우
 - 권한 정책이 불명확한 경우
 - auth/DB/API contract 변경이 필요한데 사용자 확인이 없는 경우
+- 디자인 기준 PNG와 기능 요구가 충돌하는 경우
 
 ## 완료 기준
 
-- 변경이 기준 문서와 충돌하지 않는다.
+- 변경이 `C:\Project\PSMS_Tech` 기술문서와 충돌하지 않는다.
+- Web은 `5273`, API는 `4273` 기준을 따른다.
+- `5173`, `4173`을 사용하지 않는다.
 - 관련 권한 검사가 포함되어 있다.
 - 서버 입력은 Zod 검증을 통과한다.
 - 금액/재고/수납/정책 변경은 테스트가 있다.
-- 변경 후 실행한 검증 명령 또는 검증 방법을 보고한다.
+- 화면 변경은 디자인 게이트와 UI validation 계획이 있다.
+- Electron 변경은 release checklist와 smoke 계획이 있다.
+- 변경 후 실행한 검증 명령 또는 검증하지 못한 이유를 보고한다.
 - auth/DB/API contract 변경 여부를 명시한다.
-
-## Spark 리뷰 정책
-
-| 항목                      | 값                      |
-| ------------------------- | ----------------------- |
-| Spark Review              | Pro Spark review 우선   |
-| GPT-5.5 additional review | 기본 `OFF_BY_POLICY`    |
-| Escalation 발생 시        | GPT-5.5 reviewer로 전환 |
 
 검증 결과가 없으면 완료로 보고하지 않는다.

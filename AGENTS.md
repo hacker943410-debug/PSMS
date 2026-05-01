@@ -4,28 +4,37 @@
 
 PSMS is a desktop-first phone shop operations console. It will manage sales, receivables, customers, schedules, inventory, staff, base information, policies, reports, export, and audit logs.
 
-The implementation project is currently in an early bootstrap state. The authoritative rebuild documentation is stored at `C:\Projects\PSMS_Tech\phoneshop_rebuild_docs`.
+The implementation project is currently in an early bootstrap state. The authoritative rebuild documentation and design references are stored at `C:\Project\PSMS_Tech`.
 
 ## Must Read First
 
 Before any substantive work, read the relevant local project state and harness rules:
 
 1. `docs/00_system/project-current-state.md`
-2. `docs/00_core/orchestrator-rules.md`
-3. `docs/00_core/model-routing.md`
-4. `docs/00_core/approval-policy.md`
-5. `docs/10_agents/agent-map.md`
-6. `docs/20_execution/task-execution-rule.md`
-7. `docs/20_execution/task-report-format.md`
+2. `docs/00_system/development-flow.md`
+3. `docs/00_core/orchestrator-rules.md`
+4. `docs/00_core/model-routing.md`
+5. `docs/00_core/approval-policy.md`
+6. `docs/10_agents/agent-map.md`
+7. `docs/20_execution/task-execution-rule.md`
+8. `docs/20_execution/task-report-format.md`
+9. `docs/00_system/design-implementation-gates.md`
+10. `docs/30_validation/testing-policy.md`
+11. `docs/30_validation/ui-validation.md`
+12. `docs/60_release/electron-release-checklist.md`
 
 For architecture, auth, DB, API, and domain work, also check:
 
-- `C:\Projects\PSMS_Tech\phoneshop_rebuild_docs\README.md`
-- `C:\Projects\PSMS_Tech\phoneshop_rebuild_docs\docs\02_INFORMATION_ARCHITECTURE_ROUTES_RBAC.md`
-- `C:\Projects\PSMS_Tech\phoneshop_rebuild_docs\docs\06_BACKEND_ARCHITECTURE.md`
-- `C:\Projects\PSMS_Tech\phoneshop_rebuild_docs\docs\07_DOMAIN_MODEL_DATABASE_SPEC.md`
-- `C:\Projects\PSMS_Tech\phoneshop_rebuild_docs\docs\08_SERVER_ACTIONS_AND_API_CONTRACTS.md`
-- `C:\Projects\PSMS_Tech\phoneshop_rebuild_docs\prisma\schema.draft.prisma`
+- `C:\Project\PSMS_Tech\README.md`
+- `C:\Project\PSMS_Tech\docs\02_INFORMATION_ARCHITECTURE_ROUTES_RBAC.md`
+- `C:\Project\PSMS_Tech\docs\03_UI_UX_DESIGN_SYSTEM.md`
+- `C:\Project\PSMS_Tech\docs\04_COMPONENT_ARCHITECTURE.md`
+- `C:\Project\PSMS_Tech\docs\05_FRONTEND_ARCHITECTURE.md`
+- `C:\Project\PSMS_Tech\docs\06_BACKEND_ARCHITECTURE.md`
+- `C:\Project\PSMS_Tech\docs\07_DOMAIN_MODEL_DATABASE_SPEC.md`
+- `C:\Project\PSMS_Tech\docs\08_SERVER_ACTIONS_AND_API_CONTRACTS.md`
+- `C:\Project\PSMS_Tech\prisma\schema.draft.prisma`
+- `C:\Project\PSMS_Tech\design-reference\README.md`
 
 ## Tech Stack
 
@@ -36,30 +45,49 @@ For architecture, auth, DB, API, and domain work, also check:
 - ORM: Prisma
 - Development DB: SQLite
 - Production DB: PostgreSQL recommended
+- API: Fastify + Zod
+- Desktop release target: Electron local app after Web/API MVP gates
 - Auth: Credentials-based session or Auth.js family
 - Validation: Zod
 - Date: date-fns
 - Tests: Vitest, React Testing Library, Playwright
 - Package manager: pnpm
 
+## Local Ports
+
+- PSMS Web/App: `http://127.0.0.1:5273`
+- PSMS API: `http://127.0.0.1:4273`
+- Do not use `5173` or `4173`; those ports are reserved by another local project.
+- The Web app calls the local Fastify API for auth/session and future domain operations.
+
+## Workspace Layout
+
+- `apps/web`: Next.js App Router UI on port `5273`.
+- `apps/api`: Fastify API on port `4273`.
+- `apps/desktop`: Electron shell placeholder for the release phase.
+- `packages/shared`: shared Zod schemas, result/session types, auth token helpers, format/rule helpers.
+- `packages/db`: Prisma schema, migrations, generated client, seed, DB bootstrap.
+
 ## Architecture Rules
 
-- Keep the planned structure: `src/app`, `src/components`, `src/server`, `src/lib`, `src/types`, `test`.
+- Keep the planned workspace structure: `apps/web`, `apps/api`, `apps/desktop`, `packages/shared`, `packages/db`, `test`.
 - Frontend uses Server Components for session checks, permission checks, search param parsing, and data fetching.
 - Client Components handle drawers, modals, filters, charts, form interaction, wizard steps, and toasts.
-- Backend is the Next.js server area acting as BFF.
-- Read operations live in `server/queries`.
-- Mutations start in `server/actions`.
-- Business use cases and transactions live in `server/services`.
-- Prisma access lives in `server/repositories`.
+- Backend domain ownership lives in `apps/api`.
+- Web server actions are thin adapters that call `apps/api`; they must not become the source of business logic.
+- Read operations live in API query modules or route handlers.
+- Mutations start at API routes.
+- Business use cases and transactions live in API services.
+- Prisma access lives in API repositories and `packages/db`.
 - Repositories must not contain permission checks or business rules.
-- Do not create generic REST CRUD under `/api`.
-- Route Handlers are only for export, file download, external webhook, or cases that Server Actions cannot handle.
+- Do not create generic CRUD routes without a screen/use-case contract.
+- Next.js Route Handlers are only for Web-specific needs; domain APIs belong in `apps/api`.
 
 ## Auth And RBAC Rules
 
 - Every workspace page must pass session checks.
-- Every Server Action must follow: session check, permission check, Zod validation, business rule validation, transaction when needed, audit log when needed, revalidate, `ActionResult`.
+- Every API mutation must follow: session check, permission check, Zod validation, business rule validation, transaction when needed, audit log when needed, `ActionResult`.
+- Every Web Server Action must validate its input shape, call the API adapter, then update Web cookies/navigation/revalidation only.
 - Roles are `ADMIN` and `STAFF`.
 - STAFF cannot access staff management, base information, policy management, backup, or restore.
 - If STAFF permission is ambiguous, choose the more restrictive behavior.
@@ -79,13 +107,16 @@ For architecture, auth, DB, API, and domain work, also check:
 
 ## API Contract Rules
 
-- Server Actions return the documented `ActionResult` shape.
+- Fastify API routes and Web adapter actions use the documented `ActionResult` shape.
+- Web Server Actions are adapter glue only: validate Web input shape, call the API, then update cookies/navigation/revalidation.
 - Export APIs must perform permission checks and Audit Log writes.
 - Use documented error codes such as `AUTH_REQUIRED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `POLICY_CONFLICT`.
 - Do not change API contracts casually. Escalate to GPT-5.5 architecture review first.
 
 ## UI Rules
 
+- The design reference PNGs in `C:\Project\PSMS_Tech\design-reference` are the visual source of truth.
+- Each screen must pass its design gate before it is considered complete.
 - Preserve the left sidebar plus right workspace structure.
 - List filters must sync with URL Search Params.
 - Use right-side Drawer for detail views.

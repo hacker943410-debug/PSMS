@@ -1,0 +1,27 @@
+{
+  "name": "@psms/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./action-result": "./src/action-result.ts",
+    "./admin": "./src/admin/index.ts",
+    "./admin.validation": "./src/admin.validation.ts",
+    "./auth": "./src/auth.ts",
+    "./auth.validation": "./src/auth.validation.ts",
+    "./password": "./src/password.ts",
+    "./session-token": "./src/session-token.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^4.4.1"
+  },
+  "devDependencies": {
+    "@types/node": "25.6.0",
+    "typescript": "^6.0.3"
+  }
+}

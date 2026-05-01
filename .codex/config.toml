@@ -4,7 +4,7 @@ sandbox_mode = "workspace-write"
 approval_policy = "on-request"
 
 [agents]
-max_threads = 4
+max_threads = 6
 max_depth = 1
 
 [profiles.default]
@@ -35,4 +35,22 @@ approval_policy = "on-request"
 model = "gpt-5.5"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
+approval_policy = "on-request"
+
+[profiles.code_review]
+model = "gpt-5.3-codex"
+model_reasoning_effort = "high"
+sandbox_mode = "read-only"
+approval_policy = "on-request"
+
+[profiles.ui_validation]
+model = "gpt-5.4-mini"
+model_reasoning_effort = "medium"
+sandbox_mode = "workspace-write"
+approval_policy = "on-request"
+
+[profiles.release_review]
+model = "gpt-5.5"
+model_reasoning_effort = "high"
+sandbox_mode = "read-only"
 approval_policy = "on-request"

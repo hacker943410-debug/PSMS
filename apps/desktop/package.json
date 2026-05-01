@@ -1,0 +1,10 @@
+{
+  "name": "@psms/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Electron shell placeholder for the PSMS local app release phase.",
+  "scripts": {
+    "build": "node -e \"console.log('Electron shell is planned after Web/API MVP gates pass.')\"",
+    "typecheck": "node -e \"console.log('No desktop sources yet.')\""
+  }
+}

@@ -12,16 +12,18 @@ Allowed work:
 - Tailwind layout and spacing.
 - Static tables, empty/loading/error states.
 - Dummy/demo data.
+- Design-reference spacing/color adjustments.
 - Simple docs formatting.
 - Mechanical repetitive edits that do not affect contracts.
 
 Forbidden work:
 - auth, session, RBAC, password, cookies.
 - Prisma schema, migrations, SQL, seed data.
-- Server Action contracts.
+- Fastify API routes/contracts and Web Server Action adapters.
 - sale/payment/receivable/inventory/policy transactions or calculations.
 - export permission or Audit Log.
 - deployment, CI, secrets, environment policy.
+- Electron packaging/runtime.
 
 If forbidden work appears, stop and escalate. GPT-5.5 additional code review is OFF_BY_POLICY unless an escalation trigger occurs.
 """

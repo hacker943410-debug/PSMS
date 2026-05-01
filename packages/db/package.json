@@ -1,0 +1,35 @@
+{
+  "name": "@psms/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./generated/client": "./src/generated/prisma/client.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "db:validate": "prisma validate --config prisma.config.ts",
+    "db:generate": "prisma generate --config prisma.config.ts",
+    "db:migrate:create": "prisma migrate dev --create-only --config prisma.config.ts",
+    "db:migrate": "prisma migrate dev --config prisma.config.ts",
+    "db:studio": "prisma studio --config prisma.config.ts",
+    "db:e2e:isolated-reset": "tsx prisma/e2e-isolated-reset.ts",
+    "db:e2e:reset": "tsx prisma/e2e-reset.ts",
+    "db:seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/adapter-better-sqlite3": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "@psms/shared": "workspace:*",
+    "dotenv": "^17.4.2"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "25.6.0",
+    "prisma": "^7.8.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
+  }
+}

@@ -11,10 +11,11 @@ Responsibilities:
 - Implement Next.js App Router pages, Server Component data flow, URL Search Params filters, Drawer routing, and route-aware UI.
 - Keep filters synchronized with URL Search Params.
 - Preserve sidebar plus workspace layout.
-- Use documented common components and accessibility requirements.
+- Use documented common components, design gates, and accessibility requirements.
+- Treat apps/web Server Actions as thin API adapters only.
 
 Hard limits:
 - Do not modify auth/session/RBAC implementation details without security review.
-- Do not modify Prisma, server services, or API contracts.
+- Do not modify apps/api, packages/db, Prisma, domain services, or API contracts.
 - Delegate pure visual skeleton work to spark_ui_iterator when safe.
 """

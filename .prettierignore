@@ -4,6 +4,8 @@ out
 build
 dist
 coverage
-src/generated
+packages/db/src/generated
+.playwright-mcp
 *.tsbuildinfo
 pnpm-lock.yaml
+*.svg

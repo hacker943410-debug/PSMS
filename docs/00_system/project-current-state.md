@@ -1,10 +1,40 @@
 # Project Current State
 
 작성일: 2026-04-30
+갱신: 2026-05-01
+
+## 2026-05-01 재계획 반영
+
+현재 실제 개발 작업 디렉터리는 `C:\Project\Activate\PSMS`이다.
+
+기준 기술 문서와 디자인 레퍼런스는 `C:\Project\PSMS_Tech`를 사용한다.
+
+프로젝트는 Web/API/Desktop 릴리즈 계획을 반영해 `pnpm workspace` 구조로 전환되었다.
+
+```txt
+apps/web       Next.js App Router Web, http://127.0.0.1:5273
+apps/api       Fastify API, http://127.0.0.1:4273
+apps/desktop   Electron shell placeholder
+packages/shared
+packages/db
+```
+
+`C:\Project\PSMS_Tech\design-reference`의 10개 PNG를 화면별 디자인 게이트 기준으로 사용한다.
+
+## 2026-05-01 AI Harness 동기화
+
+`C:\Project\AI_Harness`를 확인해 PSMS 현재 구조에 맞는 하네스 설정을 추가 반영했다.
+
+- `.codex/config.toml`의 agent 동시성 기준을 `max_threads = 6`으로 확장했다.
+- code review, UI validation, release review profile을 추가했다.
+- `project_manager`, `code_reviewer`, `ui_runtime_validator`, `visual_ui_reviewer`, `devops_sre_reviewer`, `release_reviewer`, `desktop_release_agent`를 추가했다.
+- agent map, orchestrator, model routing, task execution rule을 Web/API/Desktop workspace와 디자인 게이트 기준으로 갱신했다.
+- UI validation, testing policy, Electron release checklist 문서를 추가했다.
+- 현 시점 개발 흐름 기준은 `docs/00_system/development-flow.md`에 고정했다.
 
 ## 현재 구조
 
-현재 실제 개발 작업 디렉터리는 `C:\Projects\Active\PSMS`이다.
+아래 내용은 2026-04-30 bootstrap 상태 설명을 포함한다. 경로가 `C:\Projects\Active\PSMS` 또는 `C:\Projects\PSMS_Tech\phoneshop_rebuild_docs`로 표기된 부분은 2026-05-01 기준 각각 `C:\Project\Activate\PSMS`, `C:\Project\PSMS_Tech`로 대체해서 해석한다.
 
 현 시점 기준으로 `C:\Projects\Active\PSMS`에는 Next.js App Router 기반 애플리케이션 골격과 AI 하네스 설정이 생성되어 있다.
 

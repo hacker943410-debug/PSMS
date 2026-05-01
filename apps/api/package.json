@@ -1,0 +1,27 @@
+{
+  "name": "@psms/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc --noEmit",
+    "lint": "tsc --noEmit --pretty false",
+    "start": "tsx src/server.ts",
+    "test": "pnpm test:inject",
+    "test:inject": "tsx ../../test/smoke/api-auth-inject-smoke.ts && tsx ../../test/smoke/api-admin-guard-inject-smoke.ts && tsx ../../test/smoke/api-admin-read-inject-smoke.ts",
+    "test:smoke": "node ../../test/smoke/auth-smoke.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@psms/db": "workspace:*",
+    "@psms/shared": "workspace:*",
+    "dotenv": "^17.4.2",
+    "fastify": "^5.6.2"
+  },
+  "devDependencies": {
+    "@types/node": "25.6.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
+  }
+}
