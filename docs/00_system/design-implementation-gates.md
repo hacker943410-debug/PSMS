@@ -32,3 +32,10 @@
 - Playwright 스크린샷은 `1586x992`, `1440x900`, `1280x800`에서 확인한다.
 - Sidebar, PageIntro, KPI, FilterBar, DataTable, Drawer, Modal, FormField가 기준 화면과 일관되어야 한다.
 - 릴리즈 직전 일괄 보정은 완료 기준으로 인정하지 않는다.
+
+## Design Reference Match Gate
+
+- 2026-05-02부터 PNG 일치 작업은 `docs/00_system/design-reference-match-gate.md` 기준으로 진행한다.
+- 메뉴는 문서 순서대로 하나씩 패치한다.
+- 각 메뉴는 측정표, 3개 viewport screenshot, 사용자 승인까지 완료해야 승인 완료로 계산한다.
+- 현재 승인 완료는 `1/10`이며, `/` 대시보드는 사용자 승인 완료, 다음 대상은 `/sales`다.

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { LogOut, Store } from "lucide-react";
+import { isDevAuthBypassEnabled } from "@psms/shared/dev-auth-bypass";
 import { Button, WorkspaceShell } from "@/components/workspace";
 import { WorkspaceNavigation } from "@/app/(workspace)/_components/workspace-navigation";
 import { requireSession } from "@/lib/auth/session";
@@ -14,6 +15,7 @@ export default async function WorkspaceLayout({
   children: ReactNode;
 }>) {
   const session = await requireSession();
+  const isAuthBypassed = isDevAuthBypassEnabled();
 
   async function logoutAndRedirect() {
     "use server";
@@ -54,16 +56,18 @@ export default async function WorkspaceLayout({
                     </p>
                   </div>
                 </div>
-                <form action={logoutAndRedirect} className="mt-4">
-                  <Button
-                    type="submit"
-                    variant="ghost"
-                    icon={LogOut}
-                    className="w-full justify-start px-0"
-                  >
-                    로그아웃
-                  </Button>
-                </form>
+                {isAuthBypassed ? null : (
+                  <form action={logoutAndRedirect} className="mt-4">
+                    <Button
+                      type="submit"
+                      variant="ghost"
+                      icon={LogOut}
+                      className="w-full justify-start px-0"
+                    >
+                      로그아웃
+                    </Button>
+                  </form>
+                )}
               </div>
             </div>
           }

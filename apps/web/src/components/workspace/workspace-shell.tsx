@@ -16,7 +16,7 @@ export function WorkspaceShell({
   return (
     <div
       className={[
-        "h-[100dvh] min-h-[100dvh] overflow-hidden bg-[#f6f7fb] text-slate-950 lg:grid lg:grid-cols-[14rem_minmax(0,1fr)]",
+        "h-[100dvh] min-h-[100dvh] overflow-hidden bg-[#f6f7fb] text-slate-950 lg:grid lg:grid-cols-[13.625rem_minmax(0,1fr)]",
         className,
       ].join(" ")}
     >
@@ -27,7 +27,7 @@ export function WorkspaceShell({
             {header}
           </div>
         ) : null}
-        <main className="min-h-0 min-w-0 flex-1 overflow-hidden px-4 py-4 sm:px-5">
+        <main className="min-h-0 min-w-0 flex-1 overflow-hidden px-4 py-4 sm:px-5 lg:pb-4 lg:pl-[29px] lg:pr-6 lg:pt-[25px]">
           <div className="flex h-full min-h-0 w-full flex-col gap-3 overflow-hidden">
             {children}
           </div>

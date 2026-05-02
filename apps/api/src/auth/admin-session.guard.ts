@@ -1,6 +1,11 @@
 import type { FastifyRequest } from "fastify";
 import type { ActionResult, SessionContext } from "@psms/shared";
-import { hashSessionToken, SESSION_COOKIE_NAME } from "@psms/shared";
+import {
+  DEV_AUTH_BYPASS_SESSION,
+  hashSessionToken,
+  isDevAuthBypassEnabled,
+  SESSION_COOKIE_NAME,
+} from "@psms/shared";
 
 import { getSessionByTokenHash } from "../services/auth.service";
 
@@ -78,6 +83,13 @@ function forbidden(): AdminSessionGuardFailure {
 export async function requireAdminSession(
   request: FastifyRequest
 ): Promise<AdminSessionGuardResult> {
+  if (isDevAuthBypassEnabled()) {
+    return {
+      ok: true,
+      session: DEV_AUTH_BYPASS_SESSION,
+    };
+  }
+
   const sessionToken = getCookieValue(request, SESSION_COOKIE_NAME);
 
   if (!sessionToken) {

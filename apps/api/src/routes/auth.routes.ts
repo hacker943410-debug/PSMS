@@ -1,7 +1,9 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { ActionResult, SessionContext } from "@psms/shared";
 import {
+  DEV_AUTH_BYPASS_SESSION,
   hashSessionToken,
+  isDevAuthBypassEnabled,
   loginInputSchema,
   SESSION_COOKIE_NAME,
   toFieldErrors,
@@ -113,6 +115,13 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   app.get<{
     Reply: ActionResult<SessionResponseData>;
   }>("/auth/session", async (request, reply) => {
+    if (isDevAuthBypassEnabled()) {
+      return {
+        ok: true,
+        data: { session: DEV_AUTH_BYPASS_SESSION },
+      };
+    }
+
     const sessionToken = getCookieValue(request, SESSION_COOKIE_NAME);
 
     if (!sessionToken) {

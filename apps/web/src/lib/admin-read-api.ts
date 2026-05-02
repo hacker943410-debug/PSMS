@@ -2,6 +2,7 @@ import "server-only";
 
 import { cookies } from "next/headers";
 import type { ActionResult } from "@psms/shared";
+import { isDevAuthBypassEnabled } from "@psms/shared/dev-auth-bypass";
 import { SESSION_COOKIE_NAME } from "@psms/shared/session-token";
 
 import type {
@@ -172,8 +173,9 @@ async function readAdminApi<T>(
   query: Record<string, string | number | undefined>
 ): Promise<ActionResult<T>> {
   const sessionToken = await getSessionToken();
+  const isAuthBypassed = isDevAuthBypassEnabled();
 
-  if (!sessionToken) {
+  if (!sessionToken && !isAuthBypassed) {
     return {
       ok: false,
       code: "AUTH_REQUIRED",
@@ -182,11 +184,13 @@ async function readAdminApi<T>(
   }
 
   try {
+    const headers: HeadersInit = sessionToken
+      ? { cookie: createCookieHeader(sessionToken) }
+      : {};
+
     const response = await fetch(getApiUrl(path, query), {
       method: "GET",
-      headers: {
-        cookie: createCookieHeader(sessionToken),
-      },
+      headers,
       cache: "no-store",
     });
 

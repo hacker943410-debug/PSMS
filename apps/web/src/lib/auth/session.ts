@@ -3,11 +3,19 @@ import "server-only";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { SessionContext } from "@psms/shared";
+import {
+  DEV_AUTH_BYPASS_SESSION,
+  isDevAuthBypassEnabled,
+} from "@psms/shared/dev-auth-bypass";
 import { SESSION_COOKIE_NAME } from "@psms/shared/session-token";
 
 import { getSessionViaApi } from "@/lib/api-client";
 
 export async function getCurrentSession(): Promise<SessionContext | null> {
+  if (isDevAuthBypassEnabled()) {
+    return DEV_AUTH_BYPASS_SESSION;
+  }
+
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 

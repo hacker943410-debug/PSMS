@@ -1,5 +1,6 @@
 import { chromium, request } from "@playwright/test";
 import type { Browser, BrowserContext } from "@playwright/test";
+import { isDevAuthBypassEnabled } from "@psms/shared";
 import { mkdir, rm } from "node:fs/promises";
 import { spawn } from "node:child_process";
 
@@ -86,6 +87,13 @@ async function loginAndSaveStorageState(
   const page = await context.newPage();
 
   try {
+    if (isDevAuthBypassEnabled()) {
+      await page.goto("/", { waitUntil: "domcontentloaded" });
+      await page.waitForLoadState("networkidle");
+      await context.storageState({ path: storageStatePath });
+      return;
+    }
+
     await page.goto("/login", { waitUntil: "domcontentloaded" });
     await page.waitForLoadState("networkidle");
     await page.locator('input[name="loginId"]').fill(account.loginId);

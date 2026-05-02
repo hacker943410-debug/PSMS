@@ -37,6 +37,11 @@ export {
   toFieldErrors,
   type LoginInput,
 } from "./auth.validation";
+export {
+  DEV_AUTH_BYPASS_ENV,
+  DEV_AUTH_BYPASS_SESSION,
+  isDevAuthBypassEnabled,
+} from "./dev-auth-bypass";
 export { hashPassword, isPasswordHash, verifyPassword } from "./password";
 export {
   createExpiredSessionCookieOptions,

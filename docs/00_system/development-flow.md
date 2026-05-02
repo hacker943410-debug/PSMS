@@ -49,6 +49,23 @@ packages/db     Prisma schema, migration, generated client, seed
 - 기능 연결은 Web Server Action adapter가 아니라 `apps/api`가 business logic을 소유한다.
 - 화면 완료 보고에는 `1586x992`, `1440x900`, `1280x800` 검증 여부를 포함한다.
 
+## Design Reference Match Gate
+
+2026-05-02 기준, Phase 1 안에 PNG 원판 비율 일치 게이트를 추가한다.
+
+| 항목                          | 값                                                                      |
+| ----------------------------- | ----------------------------------------------------------------------- |
+| 기준 경로                     | `C:\projects\archive\PSMS_Tech\phoneshop_rebuild_docs\design-reference` |
+| 기준 크기                     | `1586x992`                                                              |
+| 진행 방식                     | 문서 순서대로 메뉴 1개씩 측정, 패치, screenshot, 사용자 승인            |
+| 승인 완료                     | `0/10`                                                                  |
+| 승인 후보                     | `/` 대시보드                                                            |
+| Design Reference Match 진행률 | `0% / 100%` 승인 기준                                                   |
+
+사용자 승인 전에는 다음 메뉴 패치를 시작하지 않는다.
+
+2026-05-02 사용자 승인 반영: `/` 대시보드는 승인 완료(`1/10`)로 계산하고, 다음 패치 대상은 `/sales` 판매 관리다.
+
 ## 다음 구현 우선순위
 
 1. `apps/web` Shell, Sidebar, PageIntro, KPI, FilterBar, DataTable, Drawer, Modal, FormField를 design-reference 기준으로 재구성한다.
