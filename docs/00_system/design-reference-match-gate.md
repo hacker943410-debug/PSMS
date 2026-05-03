@@ -1,6 +1,7 @@
 # Design Reference Match Gate
 
 작성일: 2026-05-02
+최근 갱신: 2026-05-03
 
 ## 기준
 
@@ -13,11 +14,11 @@
 | 순서 | Route                | 기준 PNG               | 상태             |
 | ---: | -------------------- | ---------------------- | ---------------- |
 |    1 | `/`                  | `dashboard.png`        | 사용자 승인 완료 |
-|    2 | `/sales`             | `sales-management.png` | 다음 패치 대상   |
-|    3 | `/sales/new`         | `sales-entry.png`      | 대기             |
-|    4 | `/receivables`       | `receivables.png`      | 대기             |
-|    5 | `/customers`         | `customers.png`        | 대기             |
-|    6 | `/schedule`          | `schedule.png`         | 대기             |
+|    2 | `/sales`             | `sales-management.png` | 사용자 승인 완료 |
+|    3 | `/sales/new`         | `sales-entry.png`      | 사용자 승인 완료 |
+|    4 | `/receivables`       | `receivables.png`      | 사용자 승인 완료 |
+|    5 | `/customers`         | `customers.png`        | 사용자 승인 완료 |
+|    6 | `/schedule`          | `schedule.png`         | 사용자 승인 후보 |
 |    7 | `/inventory`         | `inventory.png`        | 대기             |
 |    8 | `/staffs`            | `staffs.png`           | 대기             |
 |    9 | `/settings/base`     | `base-info.png`        | 대기             |
@@ -27,11 +28,11 @@
 
 | 항목                            |                   현재 |
 | ------------------------------- | ---------------------: |
-| PNG 일치 게이트 승인 완료       |               `1 / 10` |
-| PNG 일치 게이트 승인 후보       |               `0 / 10` |
-| 기존 Phase 1 Design System Gate |           `45% / 100%` |
-| Design Reference Match Gate     | `10% / 100%` 승인 기준 |
-| 전체 프로젝트                   |           `27% / 100%` |
+| PNG 일치 게이트 승인 완료       |               `5 / 10` |
+| PNG 일치 게이트 승인 후보       |               `1 / 10` |
+| 기존 Phase 1 Design System Gate |           `67% / 100%` |
+| Design Reference Match Gate     | `50% / 100%` 승인 기준 |
+| 전체 프로젝트                   |           `36% / 100%` |
 | Web/API MVP 업무 기능 준비도    |           `14% / 100%` |
 
 사용자 승인 전에는 해당 메뉴를 완료로 계산하지 않는다.

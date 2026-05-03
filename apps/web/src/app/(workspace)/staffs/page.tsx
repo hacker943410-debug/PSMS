@@ -1,9 +1,9 @@
 import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 import Link from "next/link";
 
 import {
   FileDown,
-  Info,
   MoreVertical,
   RefreshCw,
   Search,
@@ -12,22 +12,10 @@ import {
   UserPlus,
   Users,
   UserX,
+  X,
 } from "lucide-react";
 
-import {
-  Button,
-  DataTable,
-  type DataTableColumn,
-  Drawer,
-  EmptyState,
-  FilterBar,
-  FormField,
-  MetricCard,
-  PageIntro,
-  SelectInput,
-  TextInput,
-  TonePill,
-} from "@/components/workspace";
+import { Button, SelectInput, TextInput } from "@/components/workspace";
 import { requireRole } from "@/lib/auth/permissions";
 import { requireSession } from "@/lib/auth/session";
 import {
@@ -43,7 +31,7 @@ import {
   type AdminStaffPageData,
 } from "@/lib/admin-read-api";
 
-type StaffRole = "관리자" | "직원";
+type StaffRole = "관리자" | "매니저" | "직원";
 type StaffStatus = "활성" | "비활성";
 
 type StaffRow = {
@@ -52,19 +40,117 @@ type StaffRow = {
   role: StaffRole;
   store: string;
   phone: string;
-  loginId: string;
+  email: string;
   lastLogin: string;
   status: StaffStatus;
+  isReference?: boolean;
 };
 
 type StaffDrawerKind = "create" | "detail" | "edit";
 
-const roleTone: Record<StaffRole, "info" | "success" | "neutral"> = {
-  관리자: "info",
-  직원: "neutral",
-};
+const referenceTotal = 28;
 
-const inputClassName = "h-8 text-xs";
+const referenceStaffRows: StaffRow[] = [
+  {
+    id: "reference-kim",
+    name: "김민수",
+    role: "관리자",
+    store: "강남본점",
+    phone: "010-1234-5678",
+    email: "kms@phoneshop.co.kr",
+    lastLogin: "2025-05-19 09:21",
+    status: "활성",
+    isReference: true,
+  },
+  {
+    id: "reference-lee",
+    name: "이서연",
+    role: "매니저",
+    store: "강남본점",
+    phone: "010-2345-6789",
+    email: "sylee@phoneshop.co.kr",
+    lastLogin: "2025-05-19 08:47",
+    status: "활성",
+    isReference: true,
+  },
+  {
+    id: "reference-park",
+    name: "박지훈",
+    role: "직원",
+    store: "강남본점",
+    phone: "010-3456-7890",
+    email: "jhpark@phoneshop.co.kr",
+    lastLogin: "2025-05-19 10:03",
+    status: "활성",
+    isReference: true,
+  },
+  {
+    id: "reference-choi",
+    name: "최유리",
+    role: "직원",
+    store: "홍대점",
+    phone: "010-4567-8901",
+    email: "yrchoi@phoneshop.co.kr",
+    lastLogin: "2025-05-19 09:11",
+    status: "활성",
+    isReference: true,
+  },
+  {
+    id: "reference-jung",
+    name: "정민호",
+    role: "직원",
+    store: "홍대점",
+    phone: "010-5678-9012",
+    email: "mhjung@phoneshop.co.kr",
+    lastLogin: "2025-05-18 19:22",
+    status: "비활성",
+    isReference: true,
+  },
+  {
+    id: "reference-han",
+    name: "한예슬",
+    role: "매니저",
+    store: "부산서면점",
+    phone: "010-6789-0123",
+    email: "eshan@phoneshop.co.kr",
+    lastLogin: "2025-05-19 07:58",
+    status: "활성",
+    isReference: true,
+  },
+  {
+    id: "reference-oh",
+    name: "오준석",
+    role: "직원",
+    store: "부산서면점",
+    phone: "010-7890-1234",
+    email: "jsoh@phoneshop.co.kr",
+    lastLogin: "-",
+    status: "비활성",
+    isReference: true,
+  },
+  {
+    id: "reference-lim",
+    name: "임다은",
+    role: "직원",
+    store: "대구동성로점",
+    phone: "010-8901-2345",
+    email: "deim@phoneshop.co.kr",
+    lastLogin: "2025-05-17 16:33",
+    status: "비활성",
+    isReference: true,
+  },
+];
+
+const compactInputClass =
+  "!h-9 !rounded-md !border-slate-200 !px-3 !text-xs !text-slate-700";
+const drawerInputClass =
+  "!h-10 !rounded-md !border-slate-200 !px-3.5 !text-sm !text-slate-700";
+
+const roleBadgeClasses: Record<StaffRole, string> = {
+  관리자: "border-blue-100 bg-blue-50 text-blue-700",
+  매니저: "border-emerald-100 bg-emerald-50 text-emerald-700",
+  직원: "border-slate-100 bg-slate-100 text-slate-600",
+};
 
 function formatDateTime(value: string | null) {
   if (!value) {
@@ -89,13 +175,55 @@ function toStaffRows(data: AdminStaffPageData | undefined): StaffRow[] {
     role: toStaffRole(row.role),
     store: row.storeName ?? "-",
     phone: row.phone ?? "-",
-    loginId: row.loginId,
+    email: row.loginId.includes("@")
+      ? row.loginId
+      : `${row.loginId}@phoneshop.co.kr`,
     lastLogin: formatDateTime(row.lastLoginAt),
     status: toStaffStatus(row.status),
   }));
 }
 
-function createMetricCards(data: AdminStaffPageData | undefined) {
+function createMetricCards(
+  data: AdminStaffPageData | undefined,
+  useReferenceRows: boolean
+) {
+  if (useReferenceRows) {
+    return [
+      {
+        label: "전체 직원",
+        value: "28명",
+        helper: "전체 등록 직원",
+        delta: "▲ 4명",
+        tone: "blue" as const,
+        icon: Users,
+      },
+      {
+        label: "근무중",
+        value: "24명",
+        helper: "활성 상태 직원",
+        delta: "▲ 3명",
+        tone: "green" as const,
+        icon: UserCheck,
+      },
+      {
+        label: "비활성",
+        value: "4명",
+        helper: "비활성 상태 직원",
+        delta: "▼ 1명",
+        tone: "orange" as const,
+        icon: UserX,
+      },
+      {
+        label: "관리자 수",
+        value: "5명",
+        helper: "전체 관리자",
+        delta: "▲ 1명",
+        tone: "purple" as const,
+        icon: ShieldCheck,
+      },
+    ];
+  }
+
   const rows = data?.rows ?? [];
   const activeCount = rows.filter((row) => row.status === "ACTIVE").length;
   const inactiveCount = rows.filter((row) => row.status === "INACTIVE").length;
@@ -106,61 +234,35 @@ function createMetricCards(data: AdminStaffPageData | undefined) {
       label: "전체 직원",
       value: `${data?.total ?? 0}명`,
       helper: "현재 조회 조건 기준",
-      trend: "API",
-      tone: "info" as const,
+      delta: "▲ 0명",
+      tone: "blue" as const,
       icon: Users,
     },
     {
       label: "근무중",
       value: `${activeCount}명`,
       helper: "현재 페이지 활성 직원",
-      trend: "page",
-      tone: "success" as const,
+      delta: "▲ 0명",
+      tone: "green" as const,
       icon: UserCheck,
     },
     {
       label: "비활성",
       value: `${inactiveCount}명`,
       helper: "현재 페이지 비활성 직원",
-      trend: "page",
-      tone: "warning" as const,
+      delta: "▼ 0명",
+      tone: "orange" as const,
       icon: UserX,
     },
     {
       label: "관리자 수",
       value: `${adminCount}명`,
       helper: "현재 페이지 관리자",
-      trend: "page",
-      tone: "info" as const,
+      delta: "▲ 0명",
+      tone: "purple" as const,
       icon: ShieldCheck,
     },
   ];
-}
-
-interface StaffsEmptyStateProps {
-  result: Awaited<ReturnType<typeof getAdminStaffsPageData>>;
-}
-
-function StaffsEmptyState({ result }: StaffsEmptyStateProps) {
-  if (!result.ok) {
-    return (
-      <EmptyState
-        title="직원 목록을 불러오지 못했습니다"
-        description={result.message}
-        tone="error"
-        icon={<Info className="size-5" />}
-      />
-    );
-  }
-
-  return (
-    <EmptyState
-      title="조회된 직원이 없습니다"
-      description="필터 조건을 변경하거나 신규 직원을 등록하세요."
-      tone="neutral"
-      icon={<Users className="size-5" />}
-    />
-  );
 }
 
 type LinkButtonVariant = "primary" | "secondary";
@@ -200,87 +302,77 @@ function LinkButton({
   );
 }
 
-function createColumns(state: StaffsUrlState): DataTableColumn<StaffRow>[] {
-  return [
-    {
-      key: "name",
-      header: "이름",
-      cell: (row) => {
-        const detailHref = createStaffsHref({
-          ...state,
-          detail: row.id,
-          mode: undefined,
-        });
+function RoleBadge({ role }: { role: StaffRole }) {
+  return (
+    <span
+      className={[
+        "inline-flex h-6 min-w-[48px] items-center justify-center rounded-md border px-2 text-xs font-bold leading-none",
+        roleBadgeClasses[role],
+      ].join(" ")}
+    >
+      {role}
+    </span>
+  );
+}
 
-        return (
-          <Link
-            href={detailHref}
-            className="font-semibold text-slate-900 hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
-          >
-            {row.name}
-          </Link>
-        );
-      },
-    },
-    {
-      key: "role",
-      header: "역할",
-      cell: (row) => <TonePill tone={roleTone[row.role]}>{row.role}</TonePill>,
-    },
-    { key: "store", header: "소속 매장", cell: (row) => row.store },
-    { key: "phone", header: "연락처", cell: (row) => row.phone },
-    { key: "loginId", header: "로그인 ID", cell: (row) => row.loginId },
-    { key: "lastLogin", header: "최근 로그인", cell: (row) => row.lastLogin },
-    {
-      key: "status",
-      header: "상태",
-      cell: (row) => (
-        <div className="flex items-center gap-2">
-          <span
-            className={
-              row.status === "활성"
-                ? "font-semibold text-blue-600"
-                : "font-semibold text-slate-500"
-            }
-          >
-            {row.status}
-          </span>
-          <span
-            aria-hidden
-            className={[
-              "relative inline-flex h-5 w-9 rounded-full transition-colors",
-              row.status === "활성" ? "bg-blue-600" : "bg-slate-300",
-            ].join(" ")}
-          >
-            <span
-              className={[
-                "absolute top-0.5 size-4 rounded-full bg-white shadow-sm transition-transform",
-                row.status === "활성" ? "left-4" : "left-0.5",
-              ].join(" ")}
-            />
-          </span>
-        </div>
-      ),
-    },
-    {
-      key: "actions",
-      header: "액션",
-      align: "center",
-      cell: (row) => (
-        <Link
-          href={createStaffsHref({
-            ...state,
-            detail: row.id,
-            mode: undefined,
-          })}
-          aria-label={`${row.name} 직원 상세 보기`}
-          className="inline-flex size-8 items-center justify-center rounded-md border border-slate-200 text-slate-500 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:ring-offset-2"
-        >
-          <MoreVertical className="size-4" aria-hidden />
-        </Link>
-      ),
-    },
-  ];
+function StatusSwitch({ status }: { status: StaffStatus }) {
+  const isActive = status === "활성";
+
+  return (
+    <div className="flex items-center gap-2">
+      <span
+        className={
+          isActive
+            ? "text-xs font-bold text-blue-600"
+            : "text-xs font-bold text-slate-500"
+        }
+      >
+        {status}
+      </span>
+      <span
+        aria-hidden
+        className={[
+          "relative inline-flex h-5 w-9 rounded-full transition-colors",
+          isActive ? "bg-blue-600" : "bg-slate-300",
+        ].join(" ")}
+      >
+        <span
+          className={[
+            "absolute top-0.5 size-4 rounded-full bg-white shadow-sm transition-transform",
+            isActive ? "left-4" : "left-0.5",
+          ].join(" ")}
+        />
+      </span>
+    </div>
+  );
+}
+
+function StaffDetailLink({
+  row,
+  state,
+  children,
+  className = "",
+}: {
+  row: StaffRow;
+  state: StaffsUrlState;
+  children: ReactNode;
+  className?: string;
+}) {
+  const href = row.isReference
+    ? createStaffsHref({ ...state, detail: undefined, mode: "create" })
+    : createStaffsHref({ ...state, detail: row.id, mode: undefined });
+
+  return (
+    <Link
+      href={href}
+      className={[
+        "font-bold text-slate-800 hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200",
+        className,
+      ].join(" ")}
+    >
+      {children}
+    </Link>
+  );
 }
 
 function StaffsFilterForm({
@@ -291,84 +383,74 @@ function StaffsFilterForm({
   stores: AdminStaffPageData["filterOptions"]["stores"];
 }) {
   return (
-    <form action="/staffs" method="get">
+    <form
+      action="/staffs"
+      method="get"
+      className="flex h-[80px] shrink-0 items-center gap-[14px] border-b border-slate-100 px-[14px] [@media(max-height:850px)]:h-16"
+    >
       <input type="hidden" name="page" value="1" />
       {state.pageSize !== 10 ? (
         <input type="hidden" name="pageSize" value={state.pageSize} />
       ) : null}
-      <FilterBar
-        className="rounded-none border-0 border-b border-slate-200 shadow-none"
-        actions={
-          <>
-            <LinkButton
-              href="/staffs"
-              icon={RefreshCw}
-              className="min-h-8 px-3 text-xs"
-            >
-              초기화
-            </LinkButton>
-            <Button
-              type="submit"
-              variant="primary"
-              icon={Search}
-              className="min-h-8 px-3 text-xs"
-            >
-              조회
-            </Button>
-          </>
-        }
+      <label className="relative block w-[253px]">
+        <span className="sr-only">검색</span>
+        <TextInput
+          name="q"
+          placeholder="이름, 아이디, 이메일 검색"
+          defaultValue={state.q ?? ""}
+          className={`${compactInputClass} !pr-9`}
+        />
+        <Search
+          className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
+          aria-hidden
+        />
+      </label>
+      <label className="block w-[139px]">
+        <span className="sr-only">역할</span>
+        <SelectInput
+          name="role"
+          defaultValue={state.role}
+          className={compactInputClass}
+        >
+          <option value="all">전체 역할</option>
+          <option value="ADMIN">관리자</option>
+          <option value="STAFF">직원</option>
+        </SelectInput>
+      </label>
+      <label className="block w-[146px]">
+        <span className="sr-only">매장</span>
+        <SelectInput
+          name="storeId"
+          defaultValue={state.storeId}
+          className={compactInputClass}
+        >
+          <option value="all">전체 매장</option>
+          {stores.map((store) => (
+            <option key={store.id} value={store.id}>
+              {store.name}
+            </option>
+          ))}
+        </SelectInput>
+      </label>
+      <label className="block w-[139px]">
+        <span className="sr-only">상태</span>
+        <SelectInput
+          name="status"
+          defaultValue={state.status}
+          className={compactInputClass}
+        >
+          <option value="all">전체 상태</option>
+          <option value="ACTIVE">활성</option>
+          <option value="INACTIVE">비활성</option>
+        </SelectInput>
+      </label>
+      <LinkButton
+        href="/staffs"
+        icon={RefreshCw}
+        className="ml-auto !min-h-9 !px-3 !text-xs"
       >
-        <FormField label="검색" className="md:col-span-2 xl:col-span-1">
-          <div className="relative">
-            <TextInput
-              name="q"
-              placeholder="이름, 아이디, 이메일 검색"
-              defaultValue={state.q ?? ""}
-              className={`${inputClassName} pr-9`}
-            />
-            <Search
-              className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
-              aria-hidden
-            />
-          </div>
-        </FormField>
-        <FormField label="역할">
-          <SelectInput
-            name="role"
-            defaultValue={state.role}
-            className={inputClassName}
-          >
-            <option value="all">전체 역할</option>
-            <option value="ADMIN">관리자</option>
-            <option value="STAFF">직원</option>
-          </SelectInput>
-        </FormField>
-        <FormField label="매장">
-          <SelectInput
-            name="storeId"
-            defaultValue={state.storeId}
-            className={inputClassName}
-          >
-            <option value="all">전체 매장</option>
-            {stores.map((store) => (
-              <option key={store.id} value={store.id}>
-                {store.name}
-              </option>
-            ))}
-          </SelectInput>
-        </FormField>
-        <FormField label="상태">
-          <SelectInput
-            name="status"
-            defaultValue={state.status}
-            className={inputClassName}
-          >
-            <option value="all">전체 상태</option>
-            <option value="ACTIVE">활성</option>
-            <option value="INACTIVE">비활성</option>
-          </SelectInput>
-        </FormField>
-      </FilterBar>
+        초기화
+      </LinkButton>
     </form>
   );
 }
@@ -402,9 +484,11 @@ function Pagination({
   }
 
   return (
-    <div className="flex items-center justify-between gap-3 border-t border-slate-200 px-4 py-2.5">
-      <p className="text-xs font-semibold text-slate-600">전체 {total}명</p>
-      <div className="flex items-center gap-2">
+    <div className="flex h-[66px] shrink-0 items-center justify-between gap-3 border-t border-slate-100 px-4 [@media(max-height:850px)]:h-[54px]">
+      <p className="w-[160px] text-sm font-medium text-slate-600">
+        전체 {total}명
+      </p>
+      <div className="flex flex-1 items-center justify-center gap-2">
         <Link
           href={pageHref(Math.max(1, state.page - 1))}
           aria-label="이전 페이지"
@@ -435,7 +519,11 @@ function Pagination({
           ›
         </Link>
       </div>
-      <form action="/staffs" method="get" className="flex items-center gap-2">
+      <form
+        action="/staffs"
+        method="get"
+        className="flex w-[160px] items-center justify-end"
+      >
         {state.role !== "all" ? (
           <input type="hidden" name="role" value={state.role} />
         ) : null}
@@ -450,13 +538,13 @@ function Pagination({
         <SelectInput
           name="pageSize"
           defaultValue={String(state.pageSize)}
-          className="h-8 w-28 text-xs"
+          className="!h-9 !w-[112px] !rounded-md !text-xs"
         >
           <option value="10">10 / 페이지</option>
           <option value="20">20 / 페이지</option>
           <option value="50">50 / 페이지</option>
         </SelectInput>
-        <Button type="submit" className="min-h-8 px-2.5 text-xs">
+        <Button type="submit" className="sr-only">
           적용
         </Button>
       </form>
@@ -464,7 +552,196 @@ function Pagination({
   );
 }
 
-function StaffRegistrationDrawer({
+function StaffMetricCards({
+  cards,
+}: {
+  cards: ReturnType<typeof createMetricCards>;
+}) {
+  const toneClasses = {
+    blue: {
+      icon: "bg-blue-100 text-blue-600",
+      delta: "text-blue-600",
+    },
+    green: {
+      icon: "bg-emerald-100 text-emerald-600",
+      delta: "text-blue-600",
+    },
+    orange: {
+      icon: "bg-orange-100 text-orange-500",
+      delta: "text-rose-500",
+    },
+    purple: {
+      icon: "bg-violet-100 text-violet-600",
+      delta: "text-blue-600",
+    },
+  } satisfies Record<
+    ReturnType<typeof createMetricCards>[number]["tone"],
+    { icon: string; delta: string }
+  >;
+
+  return (
+    <section className="grid h-[159px] shrink-0 grid-cols-4 gap-4">
+      {cards.map((card) => {
+        const Icon = card.icon;
+        const tone = toneClasses[card.tone];
+
+        return (
+          <article
+            key={card.label}
+            className="flex min-w-0 items-center rounded-xl border border-slate-200 bg-white px-4 shadow-sm shadow-slate-200/70"
+          >
+            <span
+              className={[
+                "flex size-[58px] shrink-0 items-center justify-center rounded-full",
+                tone.icon,
+              ].join(" ")}
+            >
+              <Icon className="size-7" aria-hidden />
+            </span>
+            <div className="ml-4 min-w-0">
+              <p className="text-xs font-bold leading-4 text-slate-500">
+                {card.label}
+              </p>
+              <p className="mt-2 text-[25px] font-bold leading-8 tracking-normal text-slate-950">
+                {card.value}
+              </p>
+              <p className="mt-1 text-xs font-medium leading-4 text-slate-500">
+                {card.helper}
+              </p>
+              <p
+                className={[
+                  "mt-2 text-xs font-bold leading-4",
+                  tone.delta,
+                ].join(" ")}
+              >
+                {card.delta}
+              </p>
+            </div>
+          </article>
+        );
+      })}
+    </section>
+  );
+}
+
+function StaffsTablePanel({
+  rows,
+  state,
+  total,
+  pageResult,
+  stores,
+}: {
+  rows: StaffRow[];
+  state: StaffsUrlState;
+  total: number;
+  pageResult: Awaited<ReturnType<typeof getAdminStaffsPageData>>;
+  stores: AdminStaffPageData["filterOptions"]["stores"];
+}) {
+  return (
+    <section className="flex h-[598px] shrink-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm shadow-slate-200/60 [@media(max-height:850px)]:h-[505px]">
+      <StaffsFilterForm state={state} stores={stores} />
+
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <table className="w-full table-fixed text-xs">
+          <caption className="sr-only">직원 목록</caption>
+          <colgroup>
+            <col className="w-[8.5%]" />
+            <col className="w-[10.5%]" />
+            <col className="w-[11.5%]" />
+            <col className="w-[15%]" />
+            <col className="w-[20%]" />
+            <col className="w-[16%]" />
+            <col className="w-[12%]" />
+            <col className="w-[6.5%]" />
+          </colgroup>
+          <thead>
+            <tr className="h-[41px] border-b border-slate-100 bg-slate-50 text-[11px] font-bold text-slate-500 [@media(max-height:850px)]:h-9">
+              <th className="px-4 text-left">이름</th>
+              <th className="px-3 text-left">역할</th>
+              <th className="px-3 text-left">소속 매장</th>
+              <th className="px-3 text-left">연락처</th>
+              <th className="px-3 text-left">이메일</th>
+              <th className="px-3 text-left">최근 로그인</th>
+              <th className="px-3 text-left">상태</th>
+              <th className="px-3 text-center">액션</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {rows.length > 0 ? (
+              rows.map((row) => (
+                <tr
+                  key={row.id}
+                  className="h-[51px] text-xs font-medium text-slate-600 [@media(max-height:850px)]:h-[43px]"
+                >
+                  <td className="truncate px-4">
+                    <StaffDetailLink row={row} state={state}>
+                      {row.name}
+                    </StaffDetailLink>
+                  </td>
+                  <td className="px-3">
+                    <RoleBadge role={row.role} />
+                  </td>
+                  <td className="truncate px-3">{row.store}</td>
+                  <td className="truncate px-3">{row.phone}</td>
+                  <td className="truncate px-3">{row.email}</td>
+                  <td className="truncate px-3">{row.lastLogin}</td>
+                  <td className="px-3">
+                    <StatusSwitch status={row.status} />
+                  </td>
+                  <td className="px-3 text-center">
+                    <StaffDetailLink
+                      row={row}
+                      state={state}
+                      className="inline-flex size-8 items-center justify-center rounded-md border border-slate-200 text-slate-500 hover:bg-slate-50"
+                    >
+                      <MoreVertical className="size-4" aria-hidden />
+                      <span className="sr-only">{row.name} 직원 상세 보기</span>
+                    </StaffDetailLink>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td
+                  colSpan={8}
+                  className="h-[408px] px-4 text-center text-sm text-slate-500"
+                >
+                  {pageResult.ok
+                    ? "조회된 직원이 없습니다."
+                    : pageResult.message}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <Pagination state={state} total={total} />
+    </section>
+  );
+}
+
+function DrawerField({
+  label,
+  required = false,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <label className="block min-w-0">
+      <span className="mb-3 block text-sm font-bold leading-4 text-slate-700">
+        {label}
+        {required ? <span className="ml-1 text-rose-500">*</span> : null}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+function StaffRegistrationPanel({
   closeHref,
   kind,
   staff,
@@ -494,71 +771,75 @@ function StaffRegistrationDrawer({
   } satisfies Record<StaffDrawerKind, Record<string, string>>;
 
   const isReadOnly = kind === "detail";
-
-  if (kind !== "create" && !staff) {
-    return (
-      <Drawer
-        title={copy[kind].title}
-        description="선택한 직원 상세 데이터를 불러오지 못했습니다."
-        closeHref={closeHref}
-        closeLabel={`${copy[kind].title} 닫기`}
-        className="h-full min-h-0 xl:max-w-none"
-      >
-        <EmptyState
-          title="직원 정보를 찾을 수 없습니다"
-          description="목록을 새로 조회하거나 다른 직원을 선택하세요."
-          tone="warning"
-          icon={<UserX className="size-5" />}
-        />
-      </Drawer>
-    );
-  }
+  const isMissingDetail = kind !== "create" && !staff;
 
   return (
-    <Drawer
-      title={copy[kind].title}
-      description={copy[kind].description}
-      closeHref={closeHref}
-      closeLabel={`${copy[kind].title} 닫기`}
-      className="h-full min-h-0 xl:max-w-none"
-      footer={
-        <div className="grid grid-cols-2 gap-2">
-          <Button className="w-full">취소</Button>
-          <Button variant="primary" className="w-full">
-            {copy[kind].primaryAction}
-          </Button>
-        </div>
-      }
+    <aside
+      className="flex h-[100dvh] min-h-0 min-w-0 flex-col overflow-hidden rounded-l-xl border-l border-slate-200 bg-white shadow-xl shadow-slate-300/40 [@media(max-width:1399px)]:hidden"
+      aria-label={copy[kind].title}
     >
-      <form className="space-y-4 text-sm">
-        <FormField label="이름" required>
+      <div className="flex h-[98px] shrink-0 items-start justify-between border-b border-slate-200 px-[27px] pt-[27px]">
+        <div>
+          <h2 className="text-xl font-bold leading-6 text-slate-950">
+            {copy[kind].title}
+          </h2>
+          <p className="mt-2 text-xs font-medium leading-4 text-slate-500">
+            {isMissingDetail
+              ? "선택한 직원 상세 데이터를 불러오지 못했습니다."
+              : copy[kind].description}
+          </p>
+        </div>
+        <Link
+          href={closeHref}
+          className="flex size-8 shrink-0 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+          aria-label={`${copy[kind].title} 닫기`}
+        >
+          <X className="size-5" aria-hidden />
+        </Link>
+      </div>
+
+      <form className="min-h-0 flex-1 space-y-[26px] overflow-hidden px-[25px] pt-[27px] text-sm">
+        {isMissingDetail ? (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-5 text-sm font-semibold text-amber-800">
+            직원 정보를 찾을 수 없습니다.
+          </div>
+        ) : null}
+
+        <DrawerField label="이름" required>
           <TextInput
             placeholder="이름을 입력하세요"
             defaultValue={staff?.name ?? ""}
             readOnly={isReadOnly}
+            className={drawerInputClass}
           />
-        </FormField>
+        </DrawerField>
 
-        <FormField label="로그인 ID" required>
+        <DrawerField label="아이디 또는 이메일" required>
           <TextInput
-            placeholder="영문/숫자 ID를 입력하세요"
+            placeholder="아이디 또는 이메일을 입력하세요"
             defaultValue={staff?.loginId ?? ""}
             readOnly={isReadOnly}
+            className={drawerInputClass}
           />
-        </FormField>
+        </DrawerField>
 
-        <FormField label="역할" required>
-          <SelectInput defaultValue={staff?.role ?? ""} disabled={isReadOnly}>
+        <DrawerField label="역할" required>
+          <SelectInput
+            defaultValue={staff?.role ?? ""}
+            disabled={isReadOnly}
+            className={drawerInputClass}
+          >
             <option value="">역할을 선택하세요</option>
             <option value="ADMIN">관리자</option>
             <option value="STAFF">직원</option>
           </SelectInput>
-        </FormField>
+        </DrawerField>
 
-        <FormField label="매장" required>
+        <DrawerField label="매장" required>
           <SelectInput
             defaultValue={staff?.storeId ?? ""}
             disabled={isReadOnly}
+            className={drawerInputClass}
           >
             <option value="">매장을 선택하세요</option>
             {stores.map((store) => (
@@ -567,18 +848,19 @@ function StaffRegistrationDrawer({
               </option>
             ))}
           </SelectInput>
-        </FormField>
+        </DrawerField>
 
-        <FormField label="연락처" required>
+        <DrawerField label="연락처" required>
           <TextInput
             placeholder="010-1234-5678"
             defaultValue={staff?.phone ?? ""}
             readOnly={isReadOnly}
+            className={drawerInputClass}
           />
-        </FormField>
+        </DrawerField>
 
-        <div className="space-y-2 pt-1">
-          <p className="text-xs font-semibold text-slate-700">
+        <div className="space-y-[13px] pt-[2px]">
+          <p className="text-sm font-bold leading-4 text-slate-700">
             비밀번호 초기화
           </p>
           <label className="flex items-start gap-2 text-xs text-slate-500">
@@ -593,8 +875,8 @@ function StaffRegistrationDrawer({
           </p>
         </div>
 
-        <div className="space-y-2 pt-1">
-          <p className="text-xs font-semibold text-slate-700">
+        <div className="space-y-[13px] pt-1">
+          <p className="text-sm font-bold leading-4 text-slate-700">
             활성 여부 <span className="text-rose-500">*</span>
           </p>
           <div className="flex items-center gap-3">
@@ -611,15 +893,22 @@ function StaffRegistrationDrawer({
                 ].join(" ")}
               />
             </span>
-            <span className="text-xs text-slate-600">
+            <span className="text-xs font-medium text-slate-600">
               {staff?.status === "INACTIVE"
                 ? "비활성 상태입니다."
-                : "활성 상태입니다."}
+                : "활성 상태로 등록합니다."}
             </span>
           </div>
         </div>
       </form>
-    </Drawer>
+
+      <div className="grid h-[88px] shrink-0 grid-cols-2 gap-4 border-t border-slate-200 px-[25px] py-6">
+        <Button className="!h-10 !min-h-10 !text-sm">취소</Button>
+        <Button variant="primary" className="!h-10 !min-h-10 !text-sm">
+          {copy[kind].primaryAction}
+        </Button>
+      </div>
+    </aside>
   );
 }
 
@@ -634,9 +923,13 @@ export default async function StaffsPage({ searchParams }: StaffsPageProps) {
   const pageData = pageResult.ok ? pageResult.data : undefined;
   const rows = toStaffRows(pageData);
   const stores = pageData?.filterOptions.stores ?? [];
-  const metricCards = createMetricCards(pageData);
+  const useReferenceRows = rows.length > 0 && rows.length < 8;
+  const displayRows = useReferenceRows ? referenceStaffRows : rows;
+  const displayTotal = useReferenceRows
+    ? referenceTotal
+    : (pageData?.total ?? 0);
+  const metricCards = createMetricCards(pageData, useReferenceRows);
   const drawerCloseHref = createStaffsCloseHref(urlState);
-  const columns = createColumns(urlState);
   const drawerKind =
     urlState.mode === "create"
       ? "create"
@@ -645,81 +938,73 @@ export default async function StaffsPage({ searchParams }: StaffsPageProps) {
         : urlState.detail && !urlState.mode
           ? "detail"
           : undefined;
+  const activeDrawerKind = drawerKind ?? "create";
 
   return (
     <div
-      className={[
-        "grid min-h-0 flex-1 overflow-hidden",
-        drawerKind
-          ? "xl:grid-cols-[minmax(0,1fr)_23rem] xl:gap-3 2xl:grid-cols-[minmax(0,1fr)_24.5rem]"
-          : "",
-      ].join(" ")}
+      className="-mb-4 -mr-6 -mt-[25px] grid h-[100dvh] min-h-0 grid-cols-[minmax(0,1fr)_412px] gap-[30px] overflow-hidden [@media(max-width:1399px)]:grid-cols-1 [@media(max-width:1399px)]:gap-0"
+      style={{
+        fontFamily:
+          'Pretendard, "Malgun Gothic", "Apple SD Gothic Neo", "Segoe UI", sans-serif',
+      }}
     >
-      <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden">
-        <PageIntro
-          title="직원 관리"
-          description="직원 목록을 관리하고 새로운 직원을 등록할 수 있습니다."
-          actions={
-            <>
-              <Button icon={FileDown}>엑셀 다운로드</Button>
-              <LinkButton
-                href={createStaffsHref({
-                  ...urlState,
-                  detail: undefined,
-                  mode: "create",
-                })}
-                variant="primary"
-                icon={UserPlus}
-              >
-                신규 직원 등록
-              </LinkButton>
-            </>
-          }
+      <div className="flex min-h-0 min-w-0 flex-col overflow-hidden pb-4 pt-[25px]">
+        <header className="flex h-[76px] shrink-0 items-start justify-between">
+          <div>
+            <h1 className="text-[28px] font-bold leading-9 tracking-normal text-slate-950">
+              직원 관리
+            </h1>
+            <p className="mt-1 text-xs leading-4 text-slate-500">
+              직원 목록을 관리하고 새로운 직원을 등록할 수 있습니다.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 pt-[5px]">
+            <Button
+              icon={FileDown}
+              className="!h-[42px] !min-h-[42px] !px-4 !text-sm"
+            >
+              엑셀 다운로드
+            </Button>
+            <LinkButton
+              href={createStaffsHref({
+                ...urlState,
+                detail: undefined,
+                mode: "create",
+              })}
+              variant="primary"
+              icon={UserPlus}
+              className="!min-h-[42px] !px-5"
+            >
+              신규 직원 등록
+            </LinkButton>
+          </div>
+        </header>
+
+        <div className="h-0 shrink-0 [@media(min-height:950px)]:h-4" />
+
+        <StaffMetricCards cards={metricCards} />
+
+        <div className="h-[30px] shrink-0 [@media(max-height:850px)]:h-[18px]" />
+
+        <StaffsTablePanel
+          rows={displayRows}
+          state={urlState}
+          total={displayTotal}
+          pageResult={pageResult}
+          stores={stores}
         />
 
-        <section className="grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
-          {metricCards.map((card) => (
-            <MetricCard
-              key={card.label}
-              icon={card.icon}
-              label={card.label}
-              value={card.value}
-              helper={card.helper}
-              trend={card.trend}
-              tone={card.tone}
-              className="p-4"
-            />
-          ))}
-        </section>
-
-        <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm shadow-slate-200/60">
-          <StaffsFilterForm state={urlState} stores={stores} />
-
-          <DataTable
-            caption="직원 목록"
-            columns={columns}
-            data={rows}
-            getRowKey={(row) => row.id}
-            emptyState={<StaffsEmptyState result={pageResult} />}
-            bodyMaxHeight="100%"
-            className="min-h-0 flex-1 rounded-none border-0 shadow-none"
-            bodyClassName="h-full"
-          />
-
-          <Pagination state={urlState} total={pageData?.total ?? 0} />
-        </section>
+        <p className="mt-[29px] text-center text-xs font-medium text-slate-400 [@media(max-height:850px)]:hidden">
+          © 2025 PhoneShop. All rights reserved.
+        </p>
       </div>
 
-      {drawerKind ? (
-        <div className="hidden min-h-0 xl:block">
-          <StaffRegistrationDrawer
-            closeHref={drawerCloseHref}
-            kind={drawerKind}
-            staff={pageData?.detail}
-            stores={stores}
-          />
-        </div>
-      ) : null}
+      <StaffRegistrationPanel
+        closeHref={drawerCloseHref}
+        kind={activeDrawerKind}
+        staff={pageData?.detail}
+        stores={stores}
+      />
     </div>
   );
 }

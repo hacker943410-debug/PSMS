@@ -28,7 +28,7 @@ export function WorkspaceShell({
           </div>
         ) : null}
         <main className="min-h-0 min-w-0 flex-1 overflow-hidden px-4 py-4 sm:px-5 lg:pb-4 lg:pl-[29px] lg:pr-6 lg:pt-[25px]">
-          <div className="flex h-full min-h-0 w-full flex-col gap-3 overflow-hidden">
+          <div className="flex h-full min-h-0 w-full flex-col gap-3 overflow-visible">
             {children}
           </div>
         </main>

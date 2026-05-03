@@ -319,11 +319,37 @@ const metricCards = [
   },
 ] as const;
 
+const toneClasses = {
+  info: "bg-blue-100 text-blue-600",
+  success: "bg-emerald-100 text-emerald-600",
+  warning: "bg-amber-100 text-amber-600",
+  danger: "bg-rose-100 text-rose-600",
+} as const;
+
+function SaleTypePill({ type }: { type: SaleRow["type"] }) {
+  const classes = {
+    신규: "border-blue-200 bg-blue-50 text-blue-700",
+    기변: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    번이: "border-violet-200 bg-violet-50 text-violet-700",
+  }[type];
+
+  return (
+    <span
+      className={[
+        "inline-flex h-5 min-w-8 items-center justify-center rounded border px-1.5 text-[11px] font-bold",
+        classes,
+      ].join(" ")}
+    >
+      {type}
+    </span>
+  );
+}
+
 const saleColumns: SaleColumn[] = [
   {
     key: "time",
     header: "판매일",
-    className: "w-[12%]",
+    className: "w-[13%]",
     cell: (row) => (
       <span className="font-semibold text-blue-600">{row.time}</span>
     ),
@@ -331,13 +357,13 @@ const saleColumns: SaleColumn[] = [
   {
     key: "customer",
     header: "고객명",
-    className: "w-[7%]",
+    className: "w-[7%] max-[1320px]:hidden",
     cell: (row) => row.customer,
   },
   {
     key: "phone",
     header: "연락처",
-    className: "w-[11%]",
+    className: "w-[10%]",
     cell: (row) => row.phone,
   },
   {
@@ -355,7 +381,7 @@ const saleColumns: SaleColumn[] = [
   {
     key: "device",
     header: "기종",
-    className: "w-[14%]",
+    className: "w-[14%] max-[1220px]:hidden",
     cell: (row) => row.device,
   },
   {
@@ -391,39 +417,13 @@ const saleColumns: SaleColumn[] = [
     cell: () => (
       <button
         type="button"
-        className="inline-flex h-6 min-w-9 items-center justify-center rounded border border-slate-200 bg-white px-2 text-[11px] font-semibold text-slate-600 max-[1350px]:h-5 max-[1350px]:min-w-6 max-[1350px]:px-0 max-[1350px]:text-[10px]"
+        className="inline-flex h-6 min-w-9 items-center justify-center rounded border border-slate-200 bg-white px-2 text-[11px] font-semibold text-slate-600 max-[1350px]:h-5 max-[1350px]:min-w-7 max-[1350px]:px-0 max-[1350px]:text-[10px]"
       >
         보기
       </button>
     ),
   },
 ];
-
-const toneClasses = {
-  info: "bg-blue-100 text-blue-600",
-  success: "bg-emerald-100 text-emerald-600",
-  warning: "bg-amber-100 text-amber-600",
-  danger: "bg-rose-100 text-rose-600",
-} as const;
-
-function SaleTypePill({ type }: { type: SaleRow["type"] }) {
-  const classes = {
-    신규: "border-blue-200 bg-blue-50 text-blue-700",
-    기변: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    번이: "border-violet-200 bg-violet-50 text-violet-700",
-  }[type];
-
-  return (
-    <span
-      className={[
-        "inline-flex h-5 min-w-8 items-center justify-center rounded border px-1.5 text-[11px] font-bold",
-        classes,
-      ].join(" ")}
-    >
-      {type}
-    </span>
-  );
-}
 
 function ReceivablePill({ status }: { status: SaleRow["receivable"] }) {
   const tone = {
@@ -451,7 +451,7 @@ function SalesMetricCard({
   icon: Icon,
 }: (typeof metricCards)[number]) {
   return (
-    <article className="flex h-[94px] items-center rounded-lg border border-slate-200 bg-white px-4 shadow-sm shadow-slate-200/60 max-[1350px]:px-3">
+    <article className="flex h-[94px] min-w-0 items-center rounded-lg border border-slate-200 bg-white px-4 shadow-sm shadow-slate-200/60 max-[1350px]:px-3">
       <span
         className={[
           "mr-4 flex size-[50px] shrink-0 items-center justify-center rounded-full max-[1350px]:mr-3 max-[1350px]:size-10",
@@ -488,67 +488,75 @@ function SalesMetricCard({
 
 function SalesFilter() {
   return (
-    <section className="h-[105px] rounded-lg border border-slate-200 bg-white px-4 py-[17px] shadow-sm shadow-slate-200/60">
-      <div className="grid grid-cols-[315fr_220fr_260fr_250fr] items-center gap-x-10 gap-y-3 text-xs font-semibold text-slate-600 max-[1450px]:gap-x-7 max-[1350px]:grid-cols-[350fr_190fr_225fr_210fr] max-[1350px]:gap-x-4">
-        <label className="grid grid-cols-[2.5rem_1fr] items-center gap-3">
+    <section className="mt-4 h-[105px] rounded-lg border border-slate-200 bg-white px-4 py-[17px] shadow-sm shadow-slate-200/60">
+      <div className="grid grid-cols-[315fr_220fr_260fr_250fr] items-center gap-x-6 gap-y-3 text-[11px] font-semibold text-slate-600 max-[1350px]:grid-cols-[340fr_190fr_220fr_205fr] max-[1350px]:gap-x-3">
+        <label className="grid grid-cols-[2.8rem_1fr] items-center gap-2.5 min-w-0">
           <span>기간</span>
-          <span className="relative block">
+          <span className="relative block min-w-0">
             <CalendarDays className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
             <TextInput
               readOnly
               value="2025.05.01 ~ 2025.05.19"
-              className="h-8 pl-9 text-xs max-[1350px]:pl-8 max-[1350px]:text-[10px]"
+              className="!h-7 !w-full !px-3 !pl-9 !text-[11px]"
             />
           </span>
         </label>
-        <label className="grid grid-cols-[2.5rem_1fr] items-center gap-3">
+
+        <label className="grid min-w-0 grid-cols-[3rem_1fr] items-center gap-2">
           <span>매장</span>
-          <SelectInput defaultValue="all" className="h-8 text-xs">
+          <SelectInput defaultValue="all" className="!h-7 !w-full !text-[11px]">
             <option value="all">전체 매장</option>
           </SelectInput>
         </label>
-        <label className="grid grid-cols-[3rem_1fr] items-center gap-3">
+
+        <label className="grid min-w-0 grid-cols-[3rem_1fr] items-center gap-2">
           <span>담당자</span>
-          <SelectInput defaultValue="all" className="h-8 text-xs">
+          <SelectInput defaultValue="all" className="!h-7 !w-full !text-[11px]">
             <option value="all">전체 담당자</option>
           </SelectInput>
         </label>
-        <label className="grid grid-cols-[3rem_1fr] items-center gap-3">
+
+        <label className="grid min-w-0 grid-cols-[3rem_1fr] items-center gap-2">
           <span>통신사</span>
-          <SelectInput defaultValue="all" className="h-8 text-xs">
+          <SelectInput defaultValue="all" className="!h-7 !w-full !text-[11px]">
             <option value="all">전체</option>
           </SelectInput>
         </label>
-        <label className="grid grid-cols-[2.5rem_1fr] items-center gap-3">
+
+        <label className="grid min-w-0 grid-cols-[3rem_1fr] items-center gap-2">
           <span>가입유형</span>
-          <SelectInput defaultValue="all" className="h-8 text-xs">
+          <SelectInput defaultValue="all" className="!h-7 !w-full !text-[11px]">
             <option value="all">전체</option>
           </SelectInput>
         </label>
-        <label className="grid grid-cols-[2.5rem_1fr] items-center gap-3">
+
+        <label className="grid min-w-0 grid-cols-[3rem_1fr] items-center gap-2">
           <span>상태</span>
-          <SelectInput defaultValue="all" className="h-8 text-xs">
+          <SelectInput defaultValue="all" className="!h-7 !w-full !text-[11px]">
             <option value="all">전체</option>
           </SelectInput>
         </label>
-        <label className="relative col-span-1 block">
+
+        <label className="relative min-w-0">
           <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
           <TextInput
             placeholder="고객명, 연락처, 주문번호 검색"
-            className="h-8 pr-9 text-xs"
+            className="!h-7 !w-full !pr-9 !text-[11px]"
           />
         </label>
+
         <div className="ml-auto flex items-center gap-2">
           <Button
+            type="button"
             icon={RefreshCw}
-            className="h-8 min-h-8 whitespace-nowrap px-3 text-xs text-slate-600 max-[1350px]:gap-1 max-[1350px]:px-2 max-[1350px]:text-[11px] max-[1350px]:[&_svg]:hidden"
+            className="!h-7 !min-h-7 whitespace-nowrap !px-3 !text-[11px] text-slate-600 max-[1280px]:gap-1 max-[1280px]:!px-2 max-[1280px]:!text-[10px] max-[1280px]:[&_svg]:hidden"
           >
             초기화
           </Button>
           <Button
             variant="primary"
             icon={Search}
-            className="h-8 min-h-8 whitespace-nowrap px-3 text-xs max-[1350px]:gap-1 max-[1350px]:px-2 max-[1350px]:text-[11px] max-[1350px]:[&_svg]:hidden"
+            className="!h-7 !min-h-7 whitespace-nowrap !px-3 !text-[11px] max-[1280px]:gap-1 max-[1280px]:!px-2 max-[1280px]:!text-[10px] max-[1280px]:[&_svg]:hidden"
           >
             검색
           </Button>
@@ -560,81 +568,93 @@ function SalesFilter() {
 
 function SalesTable() {
   return (
-    <section className="flex h-[632px] shrink-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm shadow-slate-200/60 max-[1535px]:min-h-0 max-[1535px]:flex-1">
-      <div className="flex h-10 shrink-0 items-center justify-between px-4">
-        <h2 className="text-base font-bold text-slate-950">
+    <section className="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm shadow-slate-200/60">
+      <div className="flex h-10 shrink-0 items-center justify-between border-b border-slate-200 px-4">
+        <h2 className="text-[13px] font-bold leading-5 text-slate-950">
           판매 목록 <span className="text-slate-500">(총 1,248건)</span>
         </h2>
         <div className="flex items-center gap-2">
-          <SelectInput defaultValue="20" className="h-8 w-[110px] text-xs">
+          <SelectInput
+            defaultValue="20"
+            className="!h-7 w-[108px] !text-[11px]"
+          >
             <option value="20">페이지당 20개</option>
           </SelectInput>
           <Button
             icon={Settings}
-            className="h-8 min-h-8 w-[88px] whitespace-nowrap px-2 text-xs max-[1350px]:w-[72px] max-[1350px]:gap-1 max-[1350px]:text-[11px] max-[1350px]:[&_svg]:hidden"
+            className="!h-7 !min-h-7 w-[90px] whitespace-nowrap !px-2 !text-[11px] max-[1280px]:w-[72px] max-[1280px]:gap-1 max-[1280px]:!text-[10px] max-[1280px]:[&_svg]:hidden"
           >
             열 설정
           </Button>
         </div>
       </div>
-      <div className="min-h-0 flex-1 overflow-hidden px-4">
-        <table className="w-full table-fixed text-xs">
-          <thead>
-            <tr className="h-[27px] border-y border-slate-200 bg-slate-50">
-              {saleColumns.map((column) => (
-                <th
-                  key={column.key}
-                  scope="col"
-                  className={[
-                    "truncate px-2 text-left text-[11px] font-semibold text-slate-500",
-                    column.className,
-                  ].join(" ")}
-                >
-                  {column.header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {salesRows.map((row, index) => (
-              <tr
-                key={`${row.time}-${row.customer}`}
-                className={[
-                  "h-[25px]",
-                  index === 0 ? "bg-blue-50" : "bg-white",
-                ].join(" ")}
-              >
+
+      <div className="min-h-0 flex-1 overflow-hidden px-4 py-2">
+        <div className="h-full min-h-0 overflow-auto pr-1">
+          <table className="w-full table-fixed text-xs">
+            <thead className="sticky top-0 z-10 bg-slate-50">
+              <tr className="h-[30px] border-y border-slate-200">
                 {saleColumns.map((column) => (
-                  <td
+                  <th
                     key={column.key}
+                    scope="col"
                     className={[
-                      "truncate px-2 align-middle text-[11px] font-medium text-slate-700 max-[1350px]:px-1.5 max-[1350px]:text-[10px]",
+                      "truncate px-2 py-0 text-left align-middle text-[11px] font-semibold text-slate-500 max-[1280px]:px-1.5 max-[1280px]:text-[10px]",
                       column.className,
                     ].join(" ")}
                   >
-                    {column.cell(row, index)}
-                  </td>
+                    {column.header}
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody className="divide-y divide-slate-100">
+              {salesRows.map((row, index) => (
+                <tr
+                  key={`${row.time}-${row.phone}`}
+                  className={[
+                    "h-[26px]",
+                    index === 0 ? "bg-blue-50" : "bg-white",
+                  ].join(" ")}
+                >
+                  {saleColumns.map((column) => (
+                    <td
+                      key={column.key}
+                      className={[
+                        "truncate px-2 align-middle text-[11px] leading-4 font-medium text-slate-700 max-[1280px]:px-1.5 max-[1280px]:text-[10px]",
+                        column.className,
+                      ].join(" ")}
+                    >
+                      {column.cell(row, index)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-      <div className="flex h-[42px] shrink-0 items-center justify-center gap-2">
-        {["‹", "1", "2", "3", "4", "5", "...", "63", "›"].map((item) => (
-          <button
-            key={item}
-            type="button"
-            className={[
-              "flex size-7 items-center justify-center rounded-md border text-xs font-semibold",
-              item === "1"
-                ? "border-blue-600 bg-blue-600 text-white"
-                : "border-slate-200 bg-white text-slate-600",
-            ].join(" ")}
-          >
-            {item}
-          </button>
-        ))}
+
+      <div className="h-11 shrink-0 border-t border-slate-100 px-4 py-2">
+        <div className="mx-auto flex w-max items-center gap-2">
+          {["<", "1", "2", "3", "4", "5", "...", "63", ">"].map((item) => (
+            <button
+              key={item}
+              type="button"
+              className={[
+                "flex h-7 w-7 items-center justify-center rounded-md border text-xs font-semibold",
+                item === "1"
+                  ? "border-blue-600 bg-blue-600 text-white"
+                  : item === "..."
+                    ? "border-transparent bg-transparent text-slate-400"
+                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
+              ].join(" ")}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -650,7 +670,7 @@ function DetailRow({
   strong?: boolean;
 }) {
   return (
-    <p className="grid grid-cols-[4.4rem_1fr] gap-2 text-xs leading-4">
+    <p className="grid min-w-0 grid-cols-[3.6rem_1fr] gap-2 text-xs leading-4">
       <span className="font-semibold text-slate-500">{label}</span>
       <span className={strong ? "font-bold text-slate-900" : "text-slate-700"}>
         {value}
@@ -661,9 +681,11 @@ function DetailRow({
 
 function SalesDetailPanel() {
   return (
-    <aside className="-mb-4 -mt-[25px] flex h-[100dvh] min-h-0 flex-col border-l border-slate-200 bg-white">
+    <aside className="flex h-full min-h-0 flex-col border-l border-slate-200 bg-white">
       <div className="flex h-14 shrink-0 items-center justify-between px-4">
-        <h2 className="text-base font-bold text-slate-950">판매 상세</h2>
+        <h2 className="text-[15px] font-bold leading-5 text-slate-950">
+          판매 상세
+        </h2>
         <button
           type="button"
           className="flex size-7 items-center justify-center rounded text-slate-500"
@@ -672,26 +694,25 @@ function SalesDetailPanel() {
           <X className="size-4" aria-hidden />
         </button>
       </div>
-      <div className="min-h-0 flex-1 overflow-hidden px-4">
+
+      <div className="min-h-0 flex-1 overflow-y-auto px-3">
         <section className="border-b border-slate-200 pb-3">
-          <div className="grid grid-cols-[4.4rem_1fr_auto] gap-x-2 gap-y-2 text-xs leading-4 max-[1350px]:grid-cols-[4.4rem_1fr]">
+          <div className="grid min-w-0 grid-cols-[3.4rem_1fr_auto] gap-x-2 gap-y-2 text-xs leading-4">
             <span className="font-semibold text-slate-500">주문번호</span>
-            <span className="whitespace-nowrap text-[11px] font-bold text-slate-900">
+            <span className="min-w-0 truncate text-[10px] font-bold text-slate-900">
               SO-20250519-0001
             </span>
-            <TonePill className="min-h-5 px-1.5 text-[10px] max-[1350px]:hidden">
-              복사
-            </TonePill>
+            <TonePill className="min-h-5 px-1.5 text-[10px]">복사</TonePill>
             <span className="font-semibold text-slate-500">판매일</span>
-            <span className="text-slate-700">2025-05-19 14:32</span>
-            <TonePill
-              tone="success"
-              className="min-h-5 px-1.5 text-[10px] max-[1350px]:hidden"
-            >
+            <span className="min-w-0 truncate text-[10px] text-slate-700">
+              2025-05-19 14:32
+            </span>
+            <TonePill tone="success" className="min-h-5 px-1.5 text-[10px]">
               정상
             </TonePill>
           </div>
         </section>
+
         <section className="space-y-1.5 border-b border-slate-200 py-3">
           <h3 className="mb-2 text-sm font-bold text-slate-950">고객 정보</h3>
           <DetailRow label="고객명" value="김민수" />
@@ -700,12 +721,14 @@ function SalesDetailPanel() {
           <DetailRow label="이메일" value="kms1234@gmail.com" />
           <DetailRow label="주소" value="서울특별시 강남구 테헤란로 123" />
         </section>
+
         <section className="border-b border-slate-200 py-3">
           <h3 className="mb-2 text-sm font-bold text-slate-950">단말 정보</h3>
           <div className="flex gap-3">
-            <div className="relative h-[58px] w-[48px] shrink-0 overflow-hidden rounded-md bg-slate-200">
-              <div className="absolute left-1 top-1 h-10 w-2 rounded-full bg-slate-950" />
-              <div className="absolute right-1 top-2 h-12 w-8 rounded-full bg-gradient-to-br from-slate-500 via-slate-100 to-slate-800" />
+            <div className="relative h-[58px] w-[48px] shrink-0 overflow-hidden rounded-md border border-slate-200 bg-slate-100 shadow-inner shadow-slate-300/40">
+              <span className="absolute left-1 top-1 h-10 w-2 rounded-full bg-slate-950" />
+              <span className="absolute right-1 top-2 h-12 w-8 rounded-[10px] border border-white/50 bg-gradient-to-br from-slate-600 via-slate-100 to-slate-800 shadow-sm" />
+              <span className="absolute right-2 top-3 h-2 w-2 rounded-full bg-slate-950/80" />
             </div>
             <div className="min-w-0 space-y-0.5 text-xs leading-4">
               <p className="font-bold text-slate-900">Galaxy S25 (256G)</p>
@@ -715,6 +738,7 @@ function SalesDetailPanel() {
             </div>
           </div>
         </section>
+
         <section className="space-y-1.5 border-b border-slate-200 py-3">
           <h3 className="mb-2 text-sm font-bold text-slate-950">
             요금제/가입 정보
@@ -725,6 +749,7 @@ function SalesDetailPanel() {
           <DetailRow label="약정기간" value="24개월" />
           <DetailRow label="부가서비스" value="T우주 패스, 보험 프리미엄" />
         </section>
+
         <section className="space-y-1.5 border-b border-slate-200 py-3">
           <h3 className="mb-2 text-sm font-bold text-slate-950">결제 정보</h3>
           <DetailRow label="판매금액" value="₩ 1,199,000" strong />
@@ -733,6 +758,7 @@ function SalesDetailPanel() {
           <DetailRow label="미수금" value="₩ 0" strong />
           <DetailRow label="결제방법" value="카드 (일시불)" strong />
         </section>
+
         <section className="space-y-1.5 py-3">
           <h3 className="mb-2 text-sm font-bold text-slate-950">담당자/메모</h3>
           <DetailRow label="담당자" value="이서연" />
@@ -742,10 +768,11 @@ function SalesDetailPanel() {
           />
         </section>
       </div>
+
       <div className="flex h-[68px] shrink-0 items-center justify-center border-t border-slate-200 px-4">
         <button
           type="button"
-          className="h-8 w-[110px] rounded-md border border-slate-200 bg-white text-sm font-semibold text-slate-700"
+          className="h-8 w-[110px] rounded-md border border-slate-200 bg-white text-[13px] font-semibold text-slate-700"
         >
           닫기
         </button>
@@ -757,7 +784,7 @@ function SalesDetailPanel() {
 export default function SalesPage() {
   return (
     <div className="-mr-6 grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_272px] gap-3 overflow-hidden max-[1350px]:grid-cols-[minmax(0,1fr)_248px]">
-      <div className="flex min-h-0 min-w-0 flex-col gap-4 overflow-hidden pr-1">
+      <div className="flex min-h-0 min-w-0 flex-col gap-0 overflow-hidden pr-1">
         <header className="flex h-[45px] shrink-0 items-start justify-between">
           <div className="min-w-0">
             <h1 className="text-2xl font-bold leading-8 tracking-normal text-slate-950">
@@ -767,6 +794,7 @@ export default function SalesPage() {
               판매 내역을 조회하고 검색할 수 있습니다.
             </p>
           </div>
+
           <div className="flex shrink-0 items-center gap-2">
             <Button
               variant="primary"
@@ -786,7 +814,7 @@ export default function SalesPage() {
 
         <SalesFilter />
 
-        <section className="grid h-[94px] shrink-0 grid-cols-4 gap-4 max-[1350px]:gap-3">
+        <section className="mt-[15px] grid h-[94px] shrink-0 grid-cols-4 gap-4 max-[1350px]:gap-3">
           {metricCards.map((metric) => (
             <SalesMetricCard key={metric.label} {...metric} />
           ))}
