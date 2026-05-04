@@ -1,5 +1,15 @@
 # PhoneShop Rebuild Technical Documentation
 
+## 현재 개발 이어받기
+
+현재 활성 개발 저장소는 `PSMS` pnpm workspace이며, 다른 PC에서 이어받을 때는
+[`docs/80_ai_harness/cross-pc-handoff-20260504.md`](docs/80_ai_harness/cross-pc-handoff-20260504.md)를 먼저 확인한다.
+
+주요 로컬 포트:
+
+- Web/App: `http://127.0.0.1:5273`
+- API: `http://127.0.0.1:4273`
+
 최종 갱신: 2026-04-24  
 목적: 새 화면 디자인을 기준으로 PhoneShop 프로젝트를 처음부터 다시 개발하기 위한 기술 문서 묶음.
 
