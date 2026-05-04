@@ -566,18 +566,18 @@ function PolicyTable({
   return (
     <section className="flex h-[550px] min-h-0 shrink-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm shadow-slate-200/60 [@media(max-height:850px)]:!h-[430px] [@media(max-height:950px)]:h-[520px]">
       <div className="min-h-0 flex-1 overflow-hidden">
-        <table className="w-full table-fixed text-sm">
+        <table className="w-full table-fixed text-[12.5px]">
           <caption className="sr-only">정책 목록</caption>
           <colgroup>
             <col className="w-[4%]" />
-            <col className="w-[18%]" />
-            <col className="w-[7%]" />
-            <col className="w-[8%]" />
-            <col className="w-[16%]" />
-            <col className="w-[14%]" />
-            <col className="w-[7%]" />
+            <col className="w-[21%]" />
             <col className="w-[6%]" />
-            <col className="w-[13%]" />
+            <col className="w-[8%]" />
+            <col className="w-[17%]" />
+            <col className="w-[15%]" />
+            <col className="w-[5%]" />
+            <col className="w-[5%]" />
+            <col className="w-[12%]" />
             <col className="w-[7%]" />
           </colgroup>
           <thead>
@@ -604,7 +604,7 @@ function PolicyTable({
                 <tr
                   key={row.id}
                   className={[
-                    "h-[55px] border-b border-slate-100 text-sm font-medium text-slate-600 [@media(max-height:850px)]:!h-[42px] [@media(max-height:950px)]:h-[50px]",
+                    "h-[55px] border-b border-slate-100 text-[12.5px] font-medium text-slate-600 [@media(max-height:850px)]:!h-[42px] [@media(max-height:950px)]:h-[50px]",
                     isSelected
                       ? "bg-blue-50 outline outline-1 -outline-offset-1 outline-blue-500"
                       : "bg-white",
@@ -626,7 +626,7 @@ function PolicyTable({
                   <td className="truncate px-2">{row.carrier}</td>
                   <td className="truncate px-2">{row.salesType}</td>
                   <td className="truncate px-2">{row.period}</td>
-                  <td className="truncate px-2">
+                  <td className="truncate px-1.5">
                     <span
                       className={
                         isSelected ? "font-semibold text-blue-600" : undefined
@@ -635,11 +635,11 @@ function PolicyTable({
                       {row.basis}
                     </span>
                   </td>
-                  <td className="px-2">
+                  <td className="px-1.5">
                     <StatusBadge status={row.status} />
                   </td>
-                  <td className="px-2">{row.version}</td>
-                  <td className="truncate px-2">{row.updatedAt}</td>
+                  <td className="px-1.5">{row.version}</td>
+                  <td className="truncate px-1.5">{row.updatedAt}</td>
                   <td className="px-2">
                     <div className="flex justify-center gap-2">
                       <Link

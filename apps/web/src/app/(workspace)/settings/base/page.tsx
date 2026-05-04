@@ -818,9 +818,9 @@ function DeviceRegisterPanel({
         </DrawerField>
       </form>
 
-      <div className="grid h-[86px] shrink-0 grid-cols-[1fr_64px] gap-3 border-t border-slate-200 px-[22px] py-[18px] [@media(max-height:850px)]:!h-[60px] [@media(max-height:850px)]:!py-2 [@media(max-height:950px)]:h-[66px] [@media(max-height:950px)]:py-[13px]">
-        <Button className="!h-10 !min-h-10 !text-sm">취소</Button>
-        <Button variant="primary" className="!h-10 !min-h-10 !text-sm">
+      <div className="flex h-[86px] shrink-0 justify-end gap-3 border-t border-slate-200 px-[22px] py-[18px] [@media(max-height:850px)]:!h-[60px] [@media(max-height:850px)]:!py-2 [@media(max-height:950px)]:h-[66px] [@media(max-height:950px)]:py-[13px]">
+        <Button className="!h-10 !min-h-10 !w-16 !text-sm">취소</Button>
+        <Button variant="primary" className="!h-10 !min-h-10 !w-16 !text-sm">
           저장
         </Button>
       </div>

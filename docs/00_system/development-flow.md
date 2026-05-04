@@ -58,21 +58,20 @@ packages/db     Prisma schema, migration, generated client, seed
 | 기준 경로                     | `C:\projects\archive\PSMS_Tech\phoneshop_rebuild_docs\design-reference` |
 | 기준 크기                     | `1586x992`                                                              |
 | 진행 방식                     | 문서 순서대로 메뉴 1개씩 측정, 패치, screenshot, 사용자 승인            |
-| 승인 완료                     | `0/10`                                                                  |
-| 승인 후보                     | `/` 대시보드                                                            |
-| Design Reference Match 진행률 | `0% / 100%` 승인 기준                                                   |
+| 승인 완료                     | `10/10`                                                                 |
+| 승인 후보                     | `없음`                                                                  |
+| Design Reference Match 진행률 | `100% / 100%` 승인 기준                                                 |
 
-사용자 승인 전에는 다음 메뉴 패치를 시작하지 않는다.
-
-2026-05-02 사용자 승인 반영: `/` 대시보드는 승인 완료(`1/10`)로 계산하고, 다음 패치 대상은 `/sales` 판매 관리다.
+2026-05-04 사용자 승인 반영: `/settings/policies` 완료로 Design Reference Match Gate가 `10/10` 종료되었다. 이후에는 신규 디자인 기준이 추가될 때만 동일 절차를 재사용한다.
 
 ## 다음 구현 우선순위
 
-1. `apps/web` Shell, Sidebar, PageIntro, KPI, FilterBar, DataTable, Drawer, Modal, FormField를 design-reference 기준으로 재구성한다.
-2. `dashboard.png`, `sales-management.png`, `sales-entry.png` 기준 정적 화면을 먼저 맞춘다.
-3. acceptance seed를 확장해 관리자 1명, 직원 5명 이상, 매장 3개 이상, 통신사/기종/재고/고객/판매/미수금/일정/정책 데이터를 확보한다.
-4. Fastify API route test와 seed reset 스크립트를 만든다.
-5. 관리자 기반 CRUD부터 실제 API 연결을 시작한다.
+1. Phase 2 API/DB Foundation 잔여 범위를 먼저 확정한다.
+   `apps/api`, `apps/web`, `packages/shared`, `packages/db`의 실제 계약 표면과 테스트 공백을 매핑한다.
+2. Fastify auth/session/admin guard, shared validation, seed/reset, API inject test를 Foundation gate로 고정한다.
+3. Phase 3 Admin Foundation은 `staffs -> settings/base -> settings/policies` 순서로 기능 연결한다.
+4. Admin Foundation 구현 전 DB seed, RBAC, API contract 변경은 GPT-5.5 리뷰 경로를 거친다.
+5. Spark는 이미 승인된 화면의 순수 UI 보정에만 사용하고, auth/DB/API/shared contract에는 사용하지 않는다.
 
 ## 검증 기준
 

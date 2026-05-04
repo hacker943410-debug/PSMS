@@ -1,7 +1,7 @@
 # Design Reference Match Gate
 
 작성일: 2026-05-02
-최근 갱신: 2026-05-03
+최근 갱신: 2026-05-04
 
 ## 기준
 
@@ -18,24 +18,24 @@
 |    3 | `/sales/new`         | `sales-entry.png`      | 사용자 승인 완료 |
 |    4 | `/receivables`       | `receivables.png`      | 사용자 승인 완료 |
 |    5 | `/customers`         | `customers.png`        | 사용자 승인 완료 |
-|    6 | `/schedule`          | `schedule.png`         | 사용자 승인 후보 |
-|    7 | `/inventory`         | `inventory.png`        | 대기             |
-|    8 | `/staffs`            | `staffs.png`           | 대기             |
-|    9 | `/settings/base`     | `base-info.png`        | 대기             |
-|   10 | `/settings/policies` | `policies.png`         | 대기             |
+|    6 | `/schedule`          | `schedule.png`         | 사용자 승인 완료 |
+|    7 | `/inventory`         | `inventory.png`        | 사용자 승인 완료 |
+|    8 | `/staffs`            | `staffs.png`           | 사용자 승인 완료 |
+|    9 | `/settings/base`     | `base-info.png`        | 사용자 승인 완료 |
+|   10 | `/settings/policies` | `policies.png`         | 사용자 승인 완료 |
 
 ## 진행률
 
-| 항목                            |                   현재 |
-| ------------------------------- | ---------------------: |
-| PNG 일치 게이트 승인 완료       |               `5 / 10` |
-| PNG 일치 게이트 승인 후보       |               `1 / 10` |
-| 기존 Phase 1 Design System Gate |           `67% / 100%` |
-| Design Reference Match Gate     | `50% / 100%` 승인 기준 |
-| 전체 프로젝트                   |           `36% / 100%` |
-| Web/API MVP 업무 기능 준비도    |           `14% / 100%` |
+| 항목                            |                    현재 |
+| ------------------------------- | ----------------------: |
+| PNG 일치 게이트 승인 완료       |               `10 / 10` |
+| PNG 일치 게이트 승인 후보       |                `0 / 10` |
+| 기존 Phase 1 Design System Gate |            `67% / 100%` |
+| Design Reference Match Gate     | `100% / 100%` 승인 기준 |
+| 전체 프로젝트                   |            `36% / 100%` |
+| Web/API MVP 업무 기능 준비도    |            `14% / 100%` |
 
-사용자 승인 전에는 해당 메뉴를 완료로 계산하지 않는다.
+2026-05-04 사용자 승인 반영: `/settings/policies` 완료로 전환되어 Design Reference Match Gate는 `10 / 10`, `100% / 100%` 기준으로 종료되었다.
 
 ## 메뉴별 패치 규칙
 
