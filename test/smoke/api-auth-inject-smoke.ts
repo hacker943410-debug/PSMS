@@ -37,6 +37,7 @@ const tempRunDir = path.resolve(
   String(process.pid)
 );
 const tempDbPath = path.resolve(tempRunDir, "dev.db");
+const tempRateLimitPath = path.resolve(tempRunDir, "login-rate-limit.json");
 
 const accounts = {
   admin: {
@@ -63,6 +64,10 @@ async function readJson<T>(payload: string): Promise<ActionResult<T>> {
   return JSON.parse(payload) as ActionResult<T>;
 }
 
+function getHeaderValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
 async function main() {
   await mkdir(tempRunDir, { recursive: true });
   await copyFile(sourceDbPath, tempDbPath);
@@ -70,6 +75,7 @@ async function main() {
   process.env.NODE_ENV = "test";
   process.env.API_PORT = "4273";
   process.env.DATABASE_URL = toSqliteFileUrl(tempDbPath);
+  process.env.PSMS_LOGIN_RATE_LIMIT_FILE = tempRateLimitPath;
 
   const currentAuthSecret = process.env.AUTH_SECRET?.trim();
 
@@ -115,6 +121,10 @@ async function main() {
     assert.equal(missingSessionJson.ok, false);
     assert.equal(missingSessionJson.code, "AUTH_REQUIRED");
 
+    await assertMalformedSessionCookie(app);
+    await assertMalformedLogoutCookie(app);
+    await assertLoginRateLimit(app);
+
     const adminToken = await login(app, accounts.admin);
     const staffToken = await login(app, accounts.staff);
 
@@ -135,11 +145,13 @@ async function main() {
 
 async function login(
   app: FastifyInstance,
-  account: (typeof accounts)[keyof typeof accounts]
+  account: (typeof accounts)[keyof typeof accounts],
+  headers?: Record<string, string>
 ) {
   const response = await app.inject({
     method: "POST",
     url: "/auth/login",
+    headers,
     payload: {
       loginId: account.loginId,
       password: account.password,
@@ -154,6 +166,113 @@ async function login(
   assert.ok(json.data?.sessionToken);
 
   return json.data.sessionToken;
+}
+
+async function assertLoginRateLimit(app: FastifyInstance) {
+  const limitedIp = "198.51.100.90";
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const response = await app.inject({
+      method: "POST",
+      url: "/auth/login",
+      headers: {
+        "x-forwarded-for": limitedIp,
+      },
+      payload: {
+        loginId: accounts.admin.loginId,
+        password: "WrongPassword123!",
+      },
+    });
+    const json = await readJson(response.payload);
+
+    assert.equal(response.statusCode, 403);
+    assert.equal(json.ok, false);
+    assert.equal(json.code, "FORBIDDEN");
+    assert.equal(getHeaderValue(response.headers["retry-after"]), undefined);
+    assert.equal(json.data, undefined);
+  }
+
+  const blocked = await app.inject({
+    method: "POST",
+    url: "/auth/login",
+    headers: {
+      "x-forwarded-for": limitedIp,
+    },
+    payload: {
+      loginId: accounts.admin.loginId,
+      password: "WrongPassword123!",
+    },
+  });
+  const blockedJson = await readJson(blocked.payload);
+
+  const retryAfter = getHeaderValue(blocked.headers["retry-after"]);
+
+  assert.equal(blocked.statusCode, 429);
+  assert.equal(blockedJson.ok, false);
+  assert.equal(blockedJson.code, "RATE_LIMITED");
+  assert.match(blockedJson.message ?? "", /로그인 시도가 많습니다/);
+  assert.match(retryAfter ?? "", /^[1-9]\d*$/);
+  assert.ok(Number(retryAfter) <= 15 * 60);
+  assert.equal(getHeaderValue(blocked.headers["cache-control"]), "no-store");
+  assert.equal(
+    (blockedJson as Record<string, unknown>).retryAfterSeconds,
+    undefined
+  );
+  assert.equal(
+    (blockedJson as Record<string, unknown>).sessionToken,
+    undefined
+  );
+  assert.equal((blockedJson as Record<string, unknown>).expiresAt, undefined);
+  assert.equal((blockedJson as Record<string, unknown>).redirectTo, undefined);
+  assert.equal((blockedJson as Record<string, unknown>).session, undefined);
+  assert.equal((blockedJson as Record<string, unknown>).user, undefined);
+  assert.equal(getHeaderValue(blocked.headers["set-cookie"]), undefined);
+  assert.equal(blockedJson.data, undefined);
+
+  const clearIp = "198.51.100.91";
+  const failedBeforeSuccess = await app.inject({
+    method: "POST",
+    url: "/auth/login",
+    headers: {
+      "x-forwarded-for": clearIp,
+    },
+    payload: {
+      loginId: accounts.staff.loginId,
+      password: "WrongPassword123!",
+    },
+  });
+  const failedBeforeSuccessJson = await readJson(failedBeforeSuccess.payload);
+
+  assert.equal(failedBeforeSuccess.statusCode, 403);
+  assert.equal(failedBeforeSuccessJson.ok, false);
+  assert.equal(failedBeforeSuccessJson.code, "FORBIDDEN");
+
+  const staffToken = await login(app, accounts.staff, {
+    "x-forwarded-for": clearIp,
+  });
+
+  await logout(app, staffToken);
+
+  const failedAfterSuccess = await app.inject({
+    method: "POST",
+    url: "/auth/login",
+    headers: {
+      "x-forwarded-for": clearIp,
+    },
+    payload: {
+      loginId: accounts.staff.loginId,
+      password: "WrongPassword123!",
+    },
+  });
+  const failedAfterSuccessJson = await readJson(failedAfterSuccess.payload);
+
+  assert.equal(failedAfterSuccess.statusCode, 403);
+  assert.equal(failedAfterSuccessJson.ok, false);
+  assert.equal(failedAfterSuccessJson.code, "FORBIDDEN");
+  assert.doesNotMatch(
+    failedAfterSuccessJson.message ?? "",
+    /로그인 시도가 많습니다/
+  );
 }
 
 async function assertSession(
@@ -175,6 +294,35 @@ async function assertSession(
   assert.equal(json.data?.session.loginId, account.loginId);
   assert.equal(json.data?.session.role, account.role);
   assert.equal(json.data?.session.status, "ACTIVE");
+}
+
+async function assertMalformedSessionCookie(app: FastifyInstance) {
+  const response = await app.inject({
+    method: "GET",
+    url: "/auth/session",
+    headers: {
+      cookie: `${SESSION_COOKIE_NAME}=%E0%A4%A`,
+    },
+  });
+  const json = await readJson(response.payload);
+
+  assert.equal(response.statusCode, 401);
+  assert.equal(json.ok, false);
+  assert.equal(json.code, "AUTH_REQUIRED");
+}
+
+async function assertMalformedLogoutCookie(app: FastifyInstance) {
+  const response = await app.inject({
+    method: "POST",
+    url: "/auth/logout",
+    headers: {
+      cookie: `${SESSION_COOKIE_NAME}=%E0%A4%A`,
+    },
+  });
+  const json = await readJson(response.payload);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(json.ok, true);
 }
 
 async function logout(app: FastifyInstance, sessionToken: string) {

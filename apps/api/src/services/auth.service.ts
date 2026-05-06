@@ -1,6 +1,6 @@
 import { prisma } from "@psms/db";
 import {
-  canAttemptLogin,
+  checkLoginRateLimit,
   clearLoginFailures,
   recordFailedLogin,
 } from "../auth/login-rate-limit";
@@ -24,6 +24,8 @@ import {
 import type { LoginInput, SessionContext } from "@psms/shared";
 
 const GENERIC_LOGIN_FAILURE = "계정 또는 비밀번호를 확인해 주세요.";
+const RATE_LIMITED_LOGIN_FAILURE =
+  "로그인 시도가 많습니다. 잠시 후 다시 시도해 주세요.";
 const DUMMY_PASSWORD_HASH =
   "scrypt$N=16384,r=8,p=1$WGBrdQGtLoNzWH-kqzSC_g$9-EeWCcF-oZhfeXMBUXByLneQn-5_ZyHbr9MWkZsiw6WIHhl9VIvBLizcIZWiVMbA2wP8hjKVj3o2vNBGz94Yg";
 
@@ -40,11 +42,18 @@ type LoginSuccess = {
   redirectTo: string;
 };
 
-type LoginFailure = {
-  ok: false;
-  code: "FORBIDDEN";
-  message: string;
-};
+type LoginFailure =
+  | {
+      ok: false;
+      code: "FORBIDDEN";
+      message: string;
+    }
+  | {
+      ok: false;
+      code: "RATE_LIMITED";
+      message: string;
+      retryAfterSeconds: number;
+    };
 
 export type LoginResult = LoginSuccess | LoginFailure;
 
@@ -98,13 +107,16 @@ export async function loginWithCredentials(
   input: LoginInput,
   metadata: AuthRequestMetadata
 ): Promise<LoginResult> {
-  if (!canAttemptLogin(input.loginId, metadata.ipAddress)) {
+  const rateLimit = checkLoginRateLimit(input.loginId, metadata.ipAddress);
+
+  if (!rateLimit.allowed) {
     await auditLoginFailure(null, "RATE_LIMITED", metadata);
 
     return {
       ok: false,
-      code: "FORBIDDEN",
-      message: "로그인 시도가 많습니다. 잠시 후 다시 시도해 주세요.",
+      code: "RATE_LIMITED",
+      message: RATE_LIMITED_LOGIN_FAILURE,
+      retryAfterSeconds: rateLimit.retryAfterSeconds,
     };
   }
 

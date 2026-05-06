@@ -11,8 +11,9 @@
     "lint": "pnpm --filter @psms/api lint && pnpm --filter @psms/web lint",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
-    "test": "pnpm test:unit:dev-auth-bypass && pnpm test:unit:admin-url && pnpm test:unit:admin-read-query && pnpm test:unit:admin-api-query && pnpm test:api:inject",
+    "test": "pnpm test:unit:dev-auth-bypass && pnpm test:unit:login-rate-limit && pnpm test:unit:admin-url && pnpm test:unit:admin-read-query && pnpm test:unit:admin-api-query && pnpm test:api:inject",
     "test:unit:dev-auth-bypass": "node --experimental-strip-types --test test/unit/dev-auth-bypass.test.ts",
+    "test:unit:login-rate-limit": "node --experimental-strip-types --test test/unit/login-rate-limit.test.ts",
     "test:unit:admin-api-query": "pnpm --filter @psms/api exec tsx --test ../../test/unit/admin-read-query.validation.test.ts",
     "test:unit:admin-read-query": "node --experimental-strip-types --test test/unit/admin-read-query.test.ts",
     "test:unit:admin-url": "node --experimental-strip-types --test test/unit/admin-foundation-url.test.ts",
@@ -21,6 +22,7 @@
     "test:e2e:db:reset": "pnpm --filter @psms/db db:e2e:isolated-reset",
     "test:e2e:managed": "node test/e2e/managed-runner.mjs",
     "test:e2e:managed:preflight": "node test/e2e/managed-runner.mjs --preflight-report",
+    "test:e2e:auth-browser": "playwright test test/e2e/auth-browser.spec.ts",
     "test:e2e:seed": "pnpm --filter @psms/db db:e2e:reset",
     "test:e2e:design-density": "playwright test test/e2e/design-density.spec.ts",
     "test:e2e:route-guards": "playwright test test/e2e/route-guards.spec.ts",
@@ -33,8 +35,13 @@
     "db:migrate:create": "pnpm --filter @psms/db db:migrate:create",
     "db:migrate": "pnpm --filter @psms/db db:migrate",
     "db:studio": "pnpm --filter @psms/db db:studio",
+    "db:seed:idempotency": "pnpm --filter @psms/db db:seed:idempotency",
+    "db:seed:master": "pnpm --filter @psms/db db:seed:master",
+    "db:seed:master:idempotency": "pnpm --filter @psms/db db:seed:master:idempotency",
     "db:seed": "pnpm --filter @psms/db db:seed",
-    "seed": "pnpm db:seed"
+    "seed": "pnpm db:seed",
+    "test:seed:idempotency": "pnpm db:seed:idempotency",
+    "test:seed:master:idempotency": "pnpm db:seed:master:idempotency"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",

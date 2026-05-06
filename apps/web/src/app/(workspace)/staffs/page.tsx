@@ -12,7 +12,6 @@ import {
   UserPlus,
   Users,
   UserX,
-  X,
 } from "lucide-react";
 
 import { Button, SelectInput, TextInput } from "@/components/workspace";
@@ -30,6 +29,7 @@ import {
   type AdminStaffDetail,
   type AdminStaffPageData,
 } from "@/lib/admin-read-api";
+import { StaffMutationPanel } from "./_components/staff-mutation-panel";
 
 type StaffRole = "관리자" | "매니저" | "직원";
 type StaffStatus = "활성" | "비활성";
@@ -45,8 +45,6 @@ type StaffRow = {
   status: StaffStatus;
   isReference?: boolean;
 };
-
-type StaffDrawerKind = "create" | "detail" | "edit";
 
 const referenceTotal = 28;
 
@@ -143,8 +141,6 @@ const referenceStaffRows: StaffRow[] = [
 
 const compactInputClass =
   "!h-9 !rounded-md !border-slate-200 !px-3 !text-xs !text-slate-700";
-const drawerInputClass =
-  "!h-10 !rounded-md !border-slate-200 !px-3.5 !text-sm !text-slate-700";
 
 const roleBadgeClasses: Record<StaffRole, string> = {
   관리자: "border-blue-100 bg-blue-50 text-blue-700",
@@ -351,11 +347,13 @@ function StaffDetailLink({
   row,
   state,
   children,
+  ariaLabel,
   className = "",
 }: {
   row: StaffRow;
   state: StaffsUrlState;
   children: ReactNode;
+  ariaLabel?: string;
   className?: string;
 }) {
   const href = row.isReference
@@ -365,6 +363,7 @@ function StaffDetailLink({
   return (
     <Link
       href={href}
+      aria-label={ariaLabel}
       className={[
         "font-bold text-slate-800 hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200",
         className,
@@ -444,6 +443,9 @@ function StaffsFilterForm({
           <option value="INACTIVE">비활성</option>
         </SelectInput>
       </label>
+      <Button type="submit" icon={Search} className="!min-h-9 !px-3 !text-xs">
+        조회
+      </Button>
       <LinkButton
         href="/staffs"
         icon={RefreshCw}
@@ -692,6 +694,7 @@ function StaffsTablePanel({
                     <StaffDetailLink
                       row={row}
                       state={state}
+                      ariaLabel={`${row.name} 직원 상세 보기`}
                       className="inline-flex size-8 items-center justify-center rounded-md border border-slate-200 text-slate-500 hover:bg-slate-50"
                     >
                       <MoreVertical className="size-4" aria-hidden />
@@ -721,197 +724,6 @@ function StaffsTablePanel({
   );
 }
 
-function DrawerField({
-  label,
-  required = false,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <label className="block min-w-0">
-      <span className="mb-3 block text-sm font-bold leading-4 text-slate-700">
-        {label}
-        {required ? <span className="ml-1 text-rose-500">*</span> : null}
-      </span>
-      {children}
-    </label>
-  );
-}
-
-function StaffRegistrationPanel({
-  closeHref,
-  kind,
-  staff,
-  stores,
-}: {
-  closeHref: string;
-  kind: StaffDrawerKind;
-  staff?: AdminStaffDetail;
-  stores: AdminStaffPageData["filterOptions"]["stores"];
-}) {
-  const copy = {
-    create: {
-      title: "신규 직원 등록",
-      description: "직원 정보를 입력하여 새 직원을 등록하세요.",
-      primaryAction: "등록",
-    },
-    detail: {
-      title: "직원 상세",
-      description: "선택한 직원의 기본 정보를 확인합니다.",
-      primaryAction: "확인",
-    },
-    edit: {
-      title: "직원 정보 수정",
-      description: "선택한 직원의 기본 정보를 수정합니다.",
-      primaryAction: "저장",
-    },
-  } satisfies Record<StaffDrawerKind, Record<string, string>>;
-
-  const isReadOnly = kind === "detail";
-  const isMissingDetail = kind !== "create" && !staff;
-
-  return (
-    <aside
-      className="flex h-[100dvh] min-h-0 min-w-0 flex-col overflow-hidden rounded-l-xl border-l border-slate-200 bg-white shadow-xl shadow-slate-300/40 [@media(max-width:1399px)]:hidden"
-      aria-label={copy[kind].title}
-    >
-      <div className="flex h-[98px] shrink-0 items-start justify-between border-b border-slate-200 px-[27px] pt-[27px]">
-        <div>
-          <h2 className="text-xl font-bold leading-6 text-slate-950">
-            {copy[kind].title}
-          </h2>
-          <p className="mt-2 text-xs font-medium leading-4 text-slate-500">
-            {isMissingDetail
-              ? "선택한 직원 상세 데이터를 불러오지 못했습니다."
-              : copy[kind].description}
-          </p>
-        </div>
-        <Link
-          href={closeHref}
-          className="flex size-8 shrink-0 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-800"
-          aria-label={`${copy[kind].title} 닫기`}
-        >
-          <X className="size-5" aria-hidden />
-        </Link>
-      </div>
-
-      <form className="min-h-0 flex-1 space-y-[26px] overflow-hidden px-[25px] pt-[27px] text-sm">
-        {isMissingDetail ? (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-5 text-sm font-semibold text-amber-800">
-            직원 정보를 찾을 수 없습니다.
-          </div>
-        ) : null}
-
-        <DrawerField label="이름" required>
-          <TextInput
-            placeholder="이름을 입력하세요"
-            defaultValue={staff?.name ?? ""}
-            readOnly={isReadOnly}
-            className={drawerInputClass}
-          />
-        </DrawerField>
-
-        <DrawerField label="아이디 또는 이메일" required>
-          <TextInput
-            placeholder="아이디 또는 이메일을 입력하세요"
-            defaultValue={staff?.loginId ?? ""}
-            readOnly={isReadOnly}
-            className={drawerInputClass}
-          />
-        </DrawerField>
-
-        <DrawerField label="역할" required>
-          <SelectInput
-            defaultValue={staff?.role ?? ""}
-            disabled={isReadOnly}
-            className={drawerInputClass}
-          >
-            <option value="">역할을 선택하세요</option>
-            <option value="ADMIN">관리자</option>
-            <option value="STAFF">직원</option>
-          </SelectInput>
-        </DrawerField>
-
-        <DrawerField label="매장" required>
-          <SelectInput
-            defaultValue={staff?.storeId ?? ""}
-            disabled={isReadOnly}
-            className={drawerInputClass}
-          >
-            <option value="">매장을 선택하세요</option>
-            {stores.map((store) => (
-              <option key={store.id} value={store.id}>
-                {store.name}
-              </option>
-            ))}
-          </SelectInput>
-        </DrawerField>
-
-        <DrawerField label="연락처" required>
-          <TextInput
-            placeholder="010-1234-5678"
-            defaultValue={staff?.phone ?? ""}
-            readOnly={isReadOnly}
-            className={drawerInputClass}
-          />
-        </DrawerField>
-
-        <div className="space-y-[13px] pt-[2px]">
-          <p className="text-sm font-bold leading-4 text-slate-700">
-            비밀번호 초기화
-          </p>
-          <label className="flex items-start gap-2 text-xs text-slate-500">
-            <input
-              type="checkbox"
-              className="mt-0.5 size-4 rounded border-slate-300 text-blue-600"
-            />
-            <span>초기 비밀번호를 설정하고 직원에게 안내합니다.</span>
-          </label>
-          <p className="text-xs leading-5 text-slate-400">
-            기본 비밀번호는 직원의 이메일로 전송됩니다.
-          </p>
-        </div>
-
-        <div className="space-y-[13px] pt-1">
-          <p className="text-sm font-bold leading-4 text-slate-700">
-            활성 여부 <span className="text-rose-500">*</span>
-          </p>
-          <div className="flex items-center gap-3">
-            <span
-              className={[
-                "relative inline-flex h-6 w-11 rounded-full",
-                staff?.status === "INACTIVE" ? "bg-slate-300" : "bg-blue-600",
-              ].join(" ")}
-            >
-              <span
-                className={[
-                  "absolute top-0.5 size-5 rounded-full bg-white shadow-sm",
-                  staff?.status === "INACTIVE" ? "left-0.5" : "left-5",
-                ].join(" ")}
-              />
-            </span>
-            <span className="text-xs font-medium text-slate-600">
-              {staff?.status === "INACTIVE"
-                ? "비활성 상태입니다."
-                : "활성 상태로 등록합니다."}
-            </span>
-          </div>
-        </div>
-      </form>
-
-      <div className="grid h-[88px] shrink-0 grid-cols-2 gap-4 border-t border-slate-200 px-[25px] py-6">
-        <Button className="!h-10 !min-h-10 !text-sm">취소</Button>
-        <Button variant="primary" className="!h-10 !min-h-10 !text-sm">
-          {copy[kind].primaryAction}
-        </Button>
-      </div>
-    </aside>
-  );
-}
-
 type StaffsPageProps = {
   searchParams: PageSearchParams;
 };
@@ -923,7 +735,7 @@ export default async function StaffsPage({ searchParams }: StaffsPageProps) {
   const pageData = pageResult.ok ? pageResult.data : undefined;
   const rows = toStaffRows(pageData);
   const stores = pageData?.filterOptions.stores ?? [];
-  const useReferenceRows = rows.length > 0 && rows.length < 8;
+  const useReferenceRows = false;
   const displayRows = useReferenceRows ? referenceStaffRows : rows;
   const displayTotal = useReferenceRows
     ? referenceTotal
@@ -938,11 +750,26 @@ export default async function StaffsPage({ searchParams }: StaffsPageProps) {
         : urlState.detail && !urlState.mode
           ? "detail"
           : undefined;
-  const activeDrawerKind = drawerKind ?? "create";
+  const hasDrawer = Boolean(drawerKind);
+  const staffDetail = pageData?.detail;
+  const drawerEditHref = staffDetail
+    ? createStaffsHref({
+        ...urlState,
+        detail: staffDetail.id,
+        mode: "edit",
+      })
+    : undefined;
+  const pageLayoutClassName = [
+    "-mb-4 -mr-6 -mt-[25px] grid h-[100dvh] min-h-0 overflow-hidden",
+    hasDrawer
+      ? "grid-cols-[minmax(0,1fr)_412px] gap-[30px]"
+      : "grid-cols-1 gap-0",
+    "[@media(max-width:1399px)]:grid-cols-1 [@media(max-width:1399px)]:gap-0",
+  ].join(" ");
 
   return (
     <div
-      className="-mb-4 -mr-6 -mt-[25px] grid h-[100dvh] min-h-0 grid-cols-[minmax(0,1fr)_412px] gap-[30px] overflow-hidden [@media(max-width:1399px)]:grid-cols-1 [@media(max-width:1399px)]:gap-0"
+      className={pageLayoutClassName}
       style={{
         fontFamily:
           'Pretendard, "Malgun Gothic", "Apple SD Gothic Neo", "Segoe UI", sans-serif',
@@ -999,12 +826,18 @@ export default async function StaffsPage({ searchParams }: StaffsPageProps) {
         </p>
       </div>
 
-      <StaffRegistrationPanel
-        closeHref={drawerCloseHref}
-        kind={activeDrawerKind}
-        staff={pageData?.detail}
-        stores={stores}
-      />
+      {drawerKind ? (
+        <StaffMutationPanel
+          key={`${drawerKind}-${staffDetail?.id ?? "create"}-${
+            staffDetail?.updatedAt ?? ""
+          }`}
+          closeHref={drawerCloseHref}
+          editHref={drawerEditHref}
+          kind={drawerKind}
+          staff={staffDetail}
+          stores={stores}
+        />
+      ) : null}
     </div>
   );
 }

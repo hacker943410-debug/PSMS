@@ -1,5 +1,11 @@
 import { prisma } from "@psms/db";
-import type { AdminStaffDetailQuery, AdminStaffListQuery } from "@psms/shared";
+import type {
+  AdminStaffDetail,
+  AdminStaffDetailQuery,
+  AdminStaffListQuery,
+  AdminStaffListRow,
+  AdminStaffPageData,
+} from "@psms/shared/admin";
 
 import {
   countAdminStaffRows,
@@ -10,38 +16,6 @@ import {
   type AdminStaffRawRow,
 } from "../../repositories/admin-staff.repository";
 import { toIso } from "./format";
-
-export type AdminStaffListRow = {
-  id: string;
-  name: string;
-  loginId: string;
-  role: "ADMIN" | "STAFF";
-  storeId: string | null;
-  storeName: string | null;
-  phone: string | null;
-  lastLoginAt: string | null;
-  status: "ACTIVE" | "INACTIVE";
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type AdminStaffDetail = AdminStaffListRow & {
-  auditSummary: {
-    lastStatusChangedAt: string | null;
-    lastStatusChangedBy: string | null;
-  };
-};
-
-export type AdminStaffPageData = {
-  rows: AdminStaffListRow[];
-  total: number;
-  page: number;
-  pageSize: 10 | 20 | 50;
-  filterOptions: {
-    stores: Array<{ id: string; name: string; status: "ACTIVE" | "INACTIVE" }>;
-  };
-  detail?: AdminStaffDetail;
-};
 
 function toStaffListRow(row: AdminStaffRawRow): AdminStaffListRow {
   return {

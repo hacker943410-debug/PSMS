@@ -27,9 +27,13 @@ export function toFieldErrors(error: z.ZodError) {
 
   for (const issue of error.issues) {
     const field = String(issue.path[0] ?? "form");
+    const message =
+      issue.code === "unrecognized_keys"
+        ? "허용되지 않는 입력값입니다."
+        : issue.message;
 
     if (!fieldErrors[field]) {
-      fieldErrors[field] = issue.message;
+      fieldErrors[field] = message;
     }
   }
 

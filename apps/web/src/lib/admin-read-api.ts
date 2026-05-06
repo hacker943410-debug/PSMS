@@ -2,6 +2,11 @@ import "server-only";
 
 import { cookies } from "next/headers";
 import type { ActionResult } from "@psms/shared";
+import type {
+  AdminBasePageData,
+  AdminPolicyPageData,
+  AdminStaffPageData,
+} from "@psms/shared/admin";
 import { isDevAuthBypassEnabled } from "@psms/shared/dev-auth-bypass";
 import { SESSION_COOKIE_NAME } from "@psms/shared/session-token";
 
@@ -17,129 +22,20 @@ import {
   toAdminStaffListQuery,
 } from "./admin-read-query";
 
-export type AdminActiveStatus = "ACTIVE" | "INACTIVE";
-
-export type AdminStaffListRow = {
-  id: string;
-  name: string;
-  loginId: string;
-  role: "ADMIN" | "STAFF";
-  storeId: string | null;
-  storeName: string | null;
-  phone: string | null;
-  lastLoginAt: string | null;
-  status: AdminActiveStatus;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type AdminStaffDetail = AdminStaffListRow & {
-  auditSummary: {
-    lastStatusChangedAt: string | null;
-    lastStatusChangedBy: string | null;
-  };
-};
-
-export type AdminStaffPageData = {
-  rows: AdminStaffListRow[];
-  total: number;
-  page: number;
-  pageSize: 10 | 20 | 50;
-  filterOptions: {
-    stores: Array<{ id: string; name: string; status: AdminActiveStatus }>;
-  };
-  detail?: AdminStaffDetail;
-};
-
-export type AdminBaseListRow = {
-  tab:
-    | "stores"
-    | "carriers"
-    | "salesAgencies"
-    | "colors"
-    | "deviceModels"
-    | "ratePlans"
-    | "addOnServices";
-  id: string;
-  code?: string | null;
-  name: string;
-  phone?: string | null;
-  address?: string | null;
-  status: AdminActiveStatus;
-  carrierId?: string | null;
-  carrierName?: string | null;
-  contactName?: string | null;
-  contractStatus?: string | null;
-  hex?: string | null;
-  modelNo?: string | null;
-  manufacturer?: string | null;
-  releaseDate?: string | null;
-  supports5g?: boolean;
-  imageUrl?: string | null;
-  monthlyFee?: number;
-  description?: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type AdminBaseDetail = AdminBaseListRow;
-
-export type AdminBasePageData = {
-  tab: AdminBaseListRow["tab"];
-  rows: AdminBaseListRow[];
-  total: number;
-  page: number;
-  pageSize: 10 | 20 | 50;
-  detail?: AdminBaseDetail;
-  filterOptions: {
-    carriers?: Array<{ id: string; code: string; name: string }>;
-  };
-};
-
-export type AdminPolicyStatus = "ACTIVE" | "INACTIVE" | "SCHEDULED" | "EXPIRED";
-
-export type AdminPolicyListRow = {
-  id: string;
-  policyType: "saleProfit" | "staffCommission" | "discount" | "activationRule";
-  name: string;
-  carrierId: string | null;
-  carrierName: string | null;
-  subscriptionType?: "NEW" | "CHANGE_DEVICE" | "NUMBER_PORTABILITY" | null;
-  status: AdminPolicyStatus;
-  version: string;
-  effectiveFrom: string;
-  effectiveTo: string | null;
-  priority: number;
-  updatedAt: string;
-};
-
-export type AdminPolicyDetail = AdminPolicyListRow & {
-  ruleJson: unknown;
-  auditSummary: {
-    createdById: string | null;
-    updatedById: string | null;
-    lastActivatedAt: string | null;
-  };
-  conflicts?: Array<{
-    policyId: string;
-    name: string;
-    effectiveFrom: string;
-    effectiveTo: string | null;
-  }>;
-};
-
-export type AdminPolicyPageData = {
-  policyType: AdminPolicyListRow["policyType"];
-  rows: AdminPolicyListRow[];
-  total: number;
-  page: number;
-  pageSize: 10 | 20 | 50;
-  filterOptions: {
-    carriers: Array<{ id: string; code: string; name: string }>;
-    subscriptionTypes: Array<"NEW" | "CHANGE_DEVICE" | "NUMBER_PORTABILITY">;
-  };
-  detail?: AdminPolicyDetail;
-};
+export type {
+  AdminBaseDetail,
+  AdminBaseListRow,
+  AdminBasePageData,
+  AdminPolicyDetail,
+  AdminPolicyListRow,
+  AdminPolicyPageData,
+  AdminPolicyRowStatus,
+  AdminPolicySubscriptionType,
+  AdminRecordStatus,
+  AdminStaffDetail,
+  AdminStaffListRow,
+  AdminStaffPageData,
+} from "@psms/shared/admin";
 
 function getApiBaseUrl() {
   return process.env.PSMS_API_URL ?? "http://127.0.0.1:4273";

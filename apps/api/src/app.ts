@@ -6,7 +6,24 @@ import { registerHealthRoutes } from "./routes/health.routes";
 
 export async function createApiApp() {
   const app = Fastify({
-    logger: process.env.NODE_ENV === "production",
+    logger:
+      process.env.NODE_ENV === "production"
+        ? {
+            redact: {
+              paths: [
+                "req.headers.authorization",
+                "req.headers.cookie",
+                "res.headers.set-cookie",
+                "req.body.password",
+                "req.body.sessionToken",
+                "sessionToken",
+                "sessionTokenHash",
+                "passwordHash",
+              ],
+              censor: "[redacted]",
+            },
+          }
+        : false,
     bodyLimit: 1_048_576,
     trustProxy: true,
   });

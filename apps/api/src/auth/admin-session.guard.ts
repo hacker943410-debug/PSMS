@@ -18,6 +18,7 @@ export type AdminSessionGuardFailure = {
   ok: false;
   statusCode: 401 | 403;
   result: ActionResult;
+  session?: SessionContext;
 };
 
 export type AdminSessionGuardResult =
@@ -68,10 +69,11 @@ function authRequired(): AdminSessionGuardFailure {
   };
 }
 
-function forbidden(): AdminSessionGuardFailure {
+function forbidden(session: SessionContext): AdminSessionGuardFailure {
   return {
     ok: false,
     statusCode: 403,
+    session,
     result: {
       ok: false,
       code: "FORBIDDEN",
@@ -103,7 +105,7 @@ export async function requireAdminSession(
   }
 
   if (session.role !== "ADMIN") {
-    return forbidden();
+    return forbidden(session);
   }
 
   return {

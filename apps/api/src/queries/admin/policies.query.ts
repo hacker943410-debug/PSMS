@@ -1,9 +1,12 @@
 import { prisma } from "@psms/db";
 import type {
+  AdminPolicyDetail,
   AdminPolicyDetailQuery,
+  AdminPolicyListRow,
   AdminPolicyListQuery,
+  AdminPolicyPageData,
   AdminPolicyType,
-} from "@psms/shared";
+} from "@psms/shared/admin";
 
 import {
   countAdminPolicyRows,
@@ -13,49 +16,6 @@ import {
   type AdminPolicyRawRow,
 } from "../../repositories/admin-policy.repository";
 import { toIso } from "./format";
-
-export type AdminPolicyListRow = {
-  id: string;
-  policyType: AdminPolicyType;
-  name: string;
-  carrierId: string | null;
-  carrierName: string | null;
-  subscriptionType?: "NEW" | "CHANGE_DEVICE" | "NUMBER_PORTABILITY" | null;
-  status: "ACTIVE" | "INACTIVE" | "SCHEDULED" | "EXPIRED";
-  version: string;
-  effectiveFrom: string;
-  effectiveTo: string | null;
-  priority: number;
-  updatedAt: string;
-};
-
-export type AdminPolicyDetail = AdminPolicyListRow & {
-  ruleJson: unknown;
-  auditSummary: {
-    createdById: string | null;
-    updatedById: string | null;
-    lastActivatedAt: string | null;
-  };
-  conflicts?: Array<{
-    policyId: string;
-    name: string;
-    effectiveFrom: string;
-    effectiveTo: string | null;
-  }>;
-};
-
-export type AdminPolicyPageData = {
-  policyType: AdminPolicyType;
-  rows: AdminPolicyListRow[];
-  total: number;
-  page: number;
-  pageSize: 10 | 20 | 50;
-  filterOptions: {
-    carriers: Array<{ id: string; code: string; name: string }>;
-    subscriptionTypes: Array<"NEW" | "CHANGE_DEVICE" | "NUMBER_PORTABILITY">;
-  };
-  detail?: AdminPolicyDetail;
-};
 
 function toPolicyListRow(
   policyType: AdminPolicyType,

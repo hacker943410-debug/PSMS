@@ -60,8 +60,18 @@ function getCookieValue(request: FastifyRequest, name: string) {
   for (const entry of cookieHeader.split(";")) {
     const [cookieName, ...rawValue] = entry.trim().split("=");
 
-    if (cookieName === name) {
-      return decodeURIComponent(rawValue.join("="));
+    if (cookieName !== name) {
+      continue;
+    }
+
+    if (rawValue.length === 0) {
+      return null;
+    }
+
+    try {
+      return decodeURIComponent(rawValue.join("=")) || null;
+    } catch {
+      return null;
     }
   }
 
@@ -73,6 +83,8 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     Body: unknown;
     Reply: ActionResult<LoginResponseData>;
   }>("/auth/login", async (request, reply) => {
+    reply.header("Cache-Control", "no-store");
+
     const parsed = loginInputSchema.safeParse(request.body);
 
     if (!parsed.success) {
@@ -92,7 +104,11 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     );
 
     if (!result.ok) {
-      reply.code(403);
+      if (result.code === "RATE_LIMITED") {
+        reply.code(429).header("Retry-After", String(result.retryAfterSeconds));
+      } else {
+        reply.code(403);
+      }
 
       return {
         ok: false,
@@ -115,6 +131,8 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   app.get<{
     Reply: ActionResult<SessionResponseData>;
   }>("/auth/session", async (request, reply) => {
+    reply.header("Cache-Control", "no-store");
+
     if (isDevAuthBypassEnabled()) {
       return {
         ok: true,
@@ -154,7 +172,9 @@ export async function registerAuthRoutes(app: FastifyInstance) {
 
   app.post<{
     Reply: ActionResult;
-  }>("/auth/logout", async (request) => {
+  }>("/auth/logout", async (request, reply) => {
+    reply.header("Cache-Control", "no-store");
+
     const sessionToken = getCookieValue(request, SESSION_COOKIE_NAME);
 
     if (sessionToken) {

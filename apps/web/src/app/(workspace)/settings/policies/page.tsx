@@ -31,7 +31,7 @@ import {
   getAdminPoliciesPageData,
   type AdminPolicyListRow,
   type AdminPolicyPageData,
-  type AdminPolicyStatus,
+  type AdminPolicyRowStatus,
 } from "@/lib/admin-read-api";
 
 type PolicyStatus = "활성" | "예약" | "비활성" | "만료";
@@ -188,7 +188,7 @@ function formatDateTime(value: string) {
   return value.slice(0, 16).replace("T", " ");
 }
 
-function toPolicyStatus(status: AdminPolicyStatus): PolicyStatus {
+function toPolicyStatus(status: AdminPolicyRowStatus): PolicyStatus {
   switch (status) {
     case "ACTIVE":
       return "활성";

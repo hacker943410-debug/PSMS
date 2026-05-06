@@ -17,6 +17,9 @@
     "db:studio": "prisma studio --config prisma.config.ts",
     "db:e2e:isolated-reset": "tsx prisma/e2e-isolated-reset.ts",
     "db:e2e:reset": "tsx prisma/e2e-reset.ts",
+    "db:seed:idempotency": "tsx prisma/seed-idempotency-check.ts",
+    "db:seed:master": "tsx prisma/master-seed.ts",
+    "db:seed:master:idempotency": "tsx prisma/master-seed-idempotency-check.ts",
     "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {

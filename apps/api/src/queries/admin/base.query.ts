@@ -1,9 +1,12 @@
 import { prisma } from "@psms/db";
 import type {
+  AdminBaseDetail,
   AdminBaseDetailQuery,
+  AdminBaseListRow,
   AdminBaseListQuery,
   AdminBaseTab,
-} from "@psms/shared";
+  AdminBasePageData,
+} from "@psms/shared/admin";
 
 import {
   countAdminBaseRows,
@@ -13,44 +16,6 @@ import {
   type AdminBaseRawRow,
 } from "../../repositories/admin-base.repository";
 import { toDateOnly } from "./format";
-
-export type AdminBaseListRow = {
-  tab: AdminBaseTab;
-  id: string;
-  code?: string | null;
-  name: string;
-  phone?: string | null;
-  address?: string | null;
-  status: "ACTIVE" | "INACTIVE";
-  carrierId?: string | null;
-  carrierName?: string | null;
-  contactName?: string | null;
-  contractStatus?: string | null;
-  hex?: string | null;
-  modelNo?: string | null;
-  manufacturer?: string | null;
-  releaseDate?: string | null;
-  supports5g?: boolean;
-  imageUrl?: string | null;
-  monthlyFee?: number;
-  description?: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type AdminBaseDetail = AdminBaseListRow;
-
-export type AdminBasePageData = {
-  tab: AdminBaseTab;
-  rows: AdminBaseListRow[];
-  total: number;
-  page: number;
-  pageSize: 10 | 20 | 50;
-  detail?: AdminBaseDetail;
-  filterOptions: {
-    carriers?: Array<{ id: string; code: string; name: string }>;
-  };
-};
 
 function toBaseRow(tab: AdminBaseTab, row: AdminBaseRawRow): AdminBaseListRow {
   return {

@@ -1,9 +1,14 @@
 import { spawn } from "node:child_process";
+import { rm } from "node:fs/promises";
 import net from "node:net";
 import path from "node:path";
 
 const WORKSPACE_ROOT = process.cwd();
 const E2E_DB_PATH = path.resolve(WORKSPACE_ROOT, ".tmp/e2e/psms-e2e.db");
+const E2E_RATE_LIMIT_PATH = path.resolve(
+  WORKSPACE_ROOT,
+  ".tmp/e2e/login-rate-limit.json"
+);
 const E2E_DATABASE_URL = `file:${E2E_DB_PATH.replaceAll(path.sep, "/")}`;
 const HOST = "127.0.0.1";
 const WEB_PORT = 5273;
@@ -135,6 +140,9 @@ function e2eEnv() {
     APP_URL: WEB_URL,
     PSMS_API_URL: API_URL,
     PSMS_WEB_URL: WEB_URL,
+    PSMS_DEV_AUTH_BYPASS: "false",
+    PSMS_LOGIN_RATE_LIMIT_STORE: "file",
+    PSMS_LOGIN_RATE_LIMIT_FILE: E2E_RATE_LIMIT_PATH,
     PSMS_E2E_DB_MODE: "isolated",
     PSMS_SKIP_E2E_SEED_RESET: "true",
     PSMS_SEED_ADMIN_LOGIN_ID: "admin1001",
@@ -199,6 +207,7 @@ async function main() {
   const children = [];
 
   try {
+    await rm(E2E_RATE_LIMIT_PATH, { force: true });
     await runCommand(pnpmCommand(), ["test:e2e:db:reset"], env);
 
     children.push(
@@ -219,7 +228,13 @@ async function main() {
 
     await runCommand(
       pnpmCommand(),
-      ["exec", "playwright", "test", "test/e2e/route-guards.spec.ts"],
+      [
+        "exec",
+        "playwright",
+        "test",
+        "test/e2e/auth-browser.spec.ts",
+        "test/e2e/route-guards.spec.ts",
+      ],
       env
     );
   } finally {
