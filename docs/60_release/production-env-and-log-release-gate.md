@@ -82,6 +82,24 @@ release evidence artifact naming, JSON shape, forbidden field list, reviewer che
 
 수동 확인이 비어 있으면 `pnpm release:gate`가 통과해도 최종 릴리즈는 PASS로 판정하지 않는다.
 
+### Attestation Evidence Helper
+
+아래 세 수동/외부 gate는 전용 helper로 schema-valid artifact를 남긴다. 자유형 JSON,
+외부 로그 원본, screenshot, shell history, raw header/body를 evidence에 복사하지 않는다.
+
+```powershell
+pnpm release:evidence:attest --gate external-scrub-attestation --result PASS --release-candidate-id release-20260508-local --attestation-reference EXT-SCRUB-20260508 --supporting-evidence-artifact release-evidence/20260508/manual-attestation-support/external-scrub-attestation.md --supporting-evidence-sha256 <sha256> --owner external-owner --reviewer security-reviewer --query-string-scrubbed true --body-scrubbed true --session-headers-scrubbed true --set-cookie-header-scrubbed true --auth-header-scrubbed true --telemetry-scrubbed true --external-owner-attested true
+```
+
+| Gate                          | Helper controls                                                                                      |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `external-scrub-attestation`  | query/body capture disabled, session/auth headers scrubbed, telemetry scrubbed, owner attested       |
+| `webhook-receiver-log-policy` | body/secret/auth value not persisted, delivery id/attempt metadata-only logging, receiver attested   |
+| `rollback-rehearsal`          | backup verified, restore rehearsed, migration/restart checked, rotation/invalidation/quarantine plan |
+
+`PASS`는 모든 control이 `true`이고 reviewer가 owner와 다를 때만 쓴다. 미완료/미검토/불일치가
+있으면 `BLOCK` 또는 `NO-GO` artifact를 남기며, index는 이를 릴리즈 blocker로 집계한다.
+
 ### Webhook Receiver Idempotency Contract
 
 `PSMS_CREDENTIAL_DELIVERY_WEBHOOK_MAX_ATTEMPTS`는 production/release 후보에서 `1`을
@@ -108,22 +126,20 @@ rollback 담당자를 기록한다. 이 증거가 없으면 retry rollout은 BLO
 
 release report는 최소 아래 표를 채운다.
 
-| Gate                 | Scope                        | Owner | Command(s)                          | Exit code | Evidence artifact | Artifact SHA256 | Result | Time UTC | Reviewer | Notes |
-| -------------------- | ---------------------------- | ----- | ----------------------------------- | --------- | ----------------- | --------------- | ------ | -------- | -------- | ----- |
-| Env gate JSON        | release candidate            |       | `pnpm release:gate:prod-env`        |           |                   |                 |        |          |          |       |
-| Artifact secret scan | release artifacts            |       | `pnpm release:gate:logs`            |           |                   |                 |        |          |          |       |
-| Reverse proxy scrub  | external systems             |       | owner attestation                   |           |                   |                 |        |          |          |       |
-| CDN/APM scrub        | external systems             |       | owner attestation                   |           |                   |                 |        |          |          |       |
-| Webhook receiver log | external receiver            |       | owner attestation                   |           |                   |                 |        |          |          |       |
-| Receiver idempotency | external receiver            |       | owner attestation                   |           |                   |                 |        |          |          |       |
-| Limbo token scan     | credential cleanup           |       | detection SQL or dry-run            |           |                   |                 |        |          |          |       |
-| Compensation cleanup | credential cleanup           |       | cleanup dry-run/confirm             |           |                   |                 |        |          |          |       |
-| PostgreSQL cleanup   | PostgreSQL release candidate |       | rehearsal profile                   |           |                   |                 |        |          |          |       |
-| PostgreSQL scaffold  | PG static scaffold           |       | `pnpm pg:profile:preflight`         |           |                   |                 |        |          |          |       |
-| PostgreSQL readiness | PostgreSQL release candidate |       | `pnpm pg:profile:require-readiness` |           |                   |                 |        |          |          |       |
-| DB path/backup path  | release candidate            |       | backup verification                 |           |                   |                 |        |          |          |       |
-| Smoke results        | release candidate            |       | smoke commands                      |           |                   |                 |        |          |          |       |
-| Rollback rehearsal   | release rollback             |       | rollback note                       |           |                   |                 |        |          |          |       |
+| Gate                  | Scope                        | Owner | Command(s)                          | Exit code | Evidence artifact | Artifact SHA256 | Result | Time UTC | Reviewer | Notes |
+| --------------------- | ---------------------------- | ----- | ----------------------------------- | --------- | ----------------- | --------------- | ------ | -------- | -------- | ----- |
+| Env gate JSON         | release candidate            |       | `pnpm release:gate:prod-env`        |           |                   |                 |        |          |          |       |
+| Artifact secret scan  | release artifacts            |       | `pnpm release:gate:logs`            |           |                   |                 |        |          |          |       |
+| External scrub attest | external systems             |       | `pnpm release:evidence:attest`      |           |                   |                 |        |          |          |       |
+| Receiver log policy   | external receiver            |       | `pnpm release:evidence:attest`      |           |                   |                 |        |          |          |       |
+| Limbo token scan      | credential cleanup           |       | detection SQL or dry-run            |           |                   |                 |        |          |          |       |
+| Compensation cleanup  | credential cleanup           |       | cleanup dry-run/confirm             |           |                   |                 |        |          |          |       |
+| PostgreSQL cleanup    | PostgreSQL release candidate |       | rehearsal profile                   |           |                   |                 |        |          |          |       |
+| PostgreSQL scaffold   | PG static scaffold           |       | `pnpm pg:profile:preflight`         |           |                   |                 |        |          |          |       |
+| PostgreSQL readiness  | PostgreSQL release candidate |       | `pnpm pg:profile:require-readiness` |           |                   |                 |        |          |          |       |
+| DB path/backup path   | release candidate            |       | backup verification                 |           |                   |                 |        |          |          |       |
+| Smoke results         | release candidate            |       | smoke commands                      |           |                   |                 |        |          |          |       |
+| Rollback rehearsal    | release rollback             |       | `pnpm release:evidence:attest`      |           |                   |                 |        |          |          |       |
 
 `pnpm release:gate`의 automated `ok: true`는 자동 env/log gate 통과만 뜻한다. 최종 release
 PASS는 모든 manual evidence row가 `PASS` 또는 허용된 `N/A-SQLite-only` /

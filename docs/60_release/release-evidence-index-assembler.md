@@ -71,6 +71,16 @@ The index is `BLOCK` when:
 The assembler preserves valid artifact result values. It does not rewrite `PASS`, `BLOCK`, `NO-GO`,
 or allowed `N/A-*` statuses.
 
+Manual/external gates are satisfied only by validator-compatible structured attestation artifacts:
+
+- `external-scrub-attestation`
+- `webhook-receiver-log-policy`
+- `rollback-rehearsal`
+
+Generic artifacts with arbitrary `evidence` do not satisfy these gates. The validator requires
+`release:evidence:attest`, owner/reviewer separation, support artifact path/SHA, gate-specific
+controls, and safe bounded references.
+
 Allowed `N/A-*` remains governed by
 `docs/60_release/credential-cleanup-release-evidence-template.md` and the validator:
 
@@ -93,6 +103,7 @@ pnpm test:unit:release-evidence-index
 pnpm test:unit:release-evidence-validate
 pnpm test:unit:release-evidence-write
 pnpm test:unit:release-evidence-capture
+pnpm test:unit:release-evidence-attest
 pnpm test:unit:artifact-secret-scan
 pnpm release:gate:logs
 pnpm format:check

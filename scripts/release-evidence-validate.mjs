@@ -60,6 +60,63 @@ const NO_ROWS_GATES = new Set([
   "credential-cleanup-confirm",
   "credential-cleanup-auditlog",
 ]);
+const MANUAL_ATTESTATION_GATE_SCHEMAS = new Map([
+  [
+    "external-scrub-attestation",
+    {
+      attestationKind: "external-scrub",
+      requiredControls: [
+        "queryStringCaptureDisabled",
+        "requestBodyCaptureDisabled",
+        "cookieHeaderScrubbed",
+        "setCookieHeaderScrubbed",
+        "authorizationHeaderScrubbed",
+        "telemetryScrubbed",
+        "externalOwnerAttested",
+      ],
+    },
+  ],
+  [
+    "webhook-receiver-log-policy",
+    {
+      attestationKind: "receiver-log-policy",
+      requiredControls: [
+        "requestBodyNotPersisted",
+        "rawSecretNotPersisted",
+        "authHeaderValueNotPersisted",
+        "deliveryIdMetadataOnly",
+        "attemptMetadataOnly",
+        "receiverOwnerAttested",
+      ],
+    },
+  ],
+  [
+    "rollback-rehearsal",
+    {
+      attestationKind: "rollback-rehearsal",
+      requiredControls: [
+        "backupVerified",
+        "dbRestoreOrRollbackRehearsed",
+        "migrationStatusChecked",
+        "applicationRestartChecked",
+        "secretRotationPlanReviewed",
+        "credentialInvalidationPlanReviewed",
+        "artifactQuarantinePlanReviewed",
+        "rollbackOwnerAttested",
+      ],
+    },
+  ],
+]);
+const MANUAL_ATTESTATION_COMMAND_NAME = "release:evidence:attest";
+const MANUAL_ATTESTATION_COMMAND_TEMPLATE =
+  "pnpm release:evidence:attest --gate <gate> --result <result> --attestation-reference <reference>";
+const MANUAL_ATTESTATION_BLOCK_REASONS = new Set([
+  "external-attestation-pending",
+  "control-gap",
+  "receiver-idempotency-pending",
+  "rollback-rehearsal-pending",
+  "release-no-go",
+]);
 const FORBIDDEN_PATTERNS = [
   ["postgresql dsn", /\bpostgres(?:ql)?:\/\/[^\s"']{8,512}/i],
   [
@@ -674,6 +731,10 @@ function validateEvidence(artifact, relativePath, failures) {
     validateNoRowsDryRunLink(artifact, relativePath, failures);
   }
 
+  if (MANUAL_ATTESTATION_GATE_SCHEMAS.has(artifact.gate)) {
+    validateManualAttestationEvidence(artifact, relativePath, failures);
+  }
+
   if (
     artifact.result === "PASS" &&
     artifact.commandName === "pg:profile:preflight" &&
@@ -830,6 +891,413 @@ function validateNoRowsDryRunLink(artifact, relativePath, failures) {
         relativePath,
         "evidence.linkedDryRunCandidateCount",
         "N/A-NoRows evidence requires linkedDryRunCandidateCount 0."
+      )
+    );
+  }
+}
+
+function validateManualAttestationEvidence(artifact, relativePath, failures) {
+  const schema = MANUAL_ATTESTATION_GATE_SCHEMAS.get(artifact.gate);
+  const evidence = artifact.evidence;
+
+  if (!schema || !isObject(evidence)) {
+    return;
+  }
+
+  if (!["PASS", "BLOCK", "NO-GO"].includes(artifact.result)) {
+    failures.push(
+      createFailure(
+        relativePath,
+        "manualAttestation.result",
+        "Manual attestation gates require PASS, BLOCK, or NO-GO."
+      )
+    );
+  }
+
+  if (artifact.commandName !== MANUAL_ATTESTATION_COMMAND_NAME) {
+    failures.push(
+      createFailure(
+        relativePath,
+        "manualAttestation.commandName",
+        "Manual attestation evidence must be written by release:evidence:attest."
+      )
+    );
+  }
+
+  if (artifact.commandTemplate !== MANUAL_ATTESTATION_COMMAND_TEMPLATE) {
+    failures.push(
+      createFailure(
+        relativePath,
+        "manualAttestation.commandTemplate",
+        "Manual attestation evidence requires the fixed attest command template."
+      )
+    );
+  }
+
+  if (
+    artifact.summary?.candidateCount !== 0 ||
+    artifact.summary?.cleanedCount !== 0 ||
+    artifact.summary?.auditLogCount !== 0
+  ) {
+    failures.push(
+      createFailure(
+        relativePath,
+        "manualAttestation.summary",
+        "Manual attestation summary counts must all be 0."
+      )
+    );
+  }
+
+  if (
+    typeof artifact.owner === "string" &&
+    typeof artifact.reviewer === "string" &&
+    artifact.owner.trim().toLowerCase() ===
+      artifact.reviewer.trim().toLowerCase()
+  ) {
+    failures.push(
+      createFailure(
+        relativePath,
+        "manualAttestation.reviewer",
+        "Manual attestation reviewer must be distinct from owner."
+      )
+    );
+  }
+
+  if (evidence.attestationKind !== schema.attestationKind) {
+    failures.push(
+      createFailure(
+        relativePath,
+        "manualAttestation.attestationKind",
+        "Manual attestation kind does not match the gate."
+      )
+    );
+  }
+
+  if (
+    typeof evidence.attestedAt !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(evidence.attestedAt)
+  ) {
+    failures.push(
+      createFailure(
+        relativePath,
+        "manualAttestation.attestedAt",
+        "Manual attestation requires an ISO UTC attestedAt timestamp."
+      )
+    );
+  }
+
+  validateSafeOpaqueReference(
+    evidence.attestationReference,
+    "manualAttestation.attestationReference",
+    relativePath,
+    failures
+  );
+
+  validateSupportingEvidenceReference(evidence, relativePath, failures);
+  validateManualAttestationControls(artifact, schema, relativePath, failures);
+
+  if (artifact.gate === "external-scrub-attestation") {
+    validateExternalScrubEvidence(evidence, relativePath, failures);
+  }
+
+  if (artifact.gate === "webhook-receiver-log-policy") {
+    validateWebhookReceiverEvidence(evidence, relativePath, failures);
+  }
+
+  if (artifact.gate === "rollback-rehearsal") {
+    validateRollbackRehearsalEvidence(evidence, relativePath, failures);
+  }
+}
+
+function validateManualAttestationControls(
+  artifact,
+  schema,
+  relativePath,
+  failures
+) {
+  const controls = artifact.evidence?.controls;
+
+  if (!isObject(controls)) {
+    failures.push(
+      createFailure(
+        relativePath,
+        "manualAttestation.controls",
+        "Manual attestation requires structured controls."
+      )
+    );
+    return;
+  }
+
+  const requiredControls = new Set(schema.requiredControls);
+
+  for (const field of Object.keys(controls)) {
+    if (!requiredControls.has(field)) {
+      failures.push(
+        createFailure(
+          relativePath,
+          `manualAttestation.controls.${field}`,
+          `${field} is not an allowed attestation control.`
+        )
+      );
+    }
+  }
+
+  for (const field of schema.requiredControls) {
+    if (typeof controls[field] !== "boolean") {
+      failures.push(
+        createFailure(
+          relativePath,
+          `manualAttestation.controls.${field}`,
+          `${field} must be boolean.`
+        )
+      );
+      continue;
+    }
+
+    if (artifact.result === "PASS" && controls[field] !== true) {
+      failures.push(
+        createFailure(
+          relativePath,
+          `manualAttestation.controls.${field}.pass`,
+          `${field} must be true for PASS attestation.`
+        )
+      );
+    }
+  }
+
+  const blockReason = artifact.evidence?.blockReason;
+
+  if (artifact.result === "PASS" && blockReason !== "N/A") {
+    failures.push(
+      createFailure(
+        relativePath,
+        "manualAttestation.blockReason.pass",
+        "PASS attestation requires blockReason N/A."
+      )
+    );
+  }
+
+  if (
+    artifact.result !== "PASS" &&
+    !MANUAL_ATTESTATION_BLOCK_REASONS.has(blockReason)
+  ) {
+    failures.push(
+      createFailure(
+        relativePath,
+        "manualAttestation.blockReason",
+        "BLOCK/NO-GO attestation requires an allowed non-N/A blockReason."
+      )
+    );
+  }
+}
+
+function validateSupportingEvidenceReference(evidence, relativePath, failures) {
+  if (
+    typeof evidence.supportingEvidenceArtifactPath !== "string" ||
+    !/^release-evidence\/\d{8}\/manual-attestation-support\/[A-Za-z0-9._-]+\.(json|md|txt)$/.test(
+      evidence.supportingEvidenceArtifactPath
+    ) ||
+    /https?:|[?&=]|\bpostgres(?:ql)?:|\bbearer\b|\bauthorization\b|\bcookie\b|\bset-cookie\b|\bpassword\b|\btokenhash\b|\brawtoken\b/i.test(
+      evidence.supportingEvidenceArtifactPath
+    )
+  ) {
+    failures.push(
+      createFailure(
+        relativePath,
+        "manualAttestation.supportingEvidenceArtifactPath",
+        "Manual attestation requires a safe release-evidence support path."
+      )
+    );
+  }
+
+  if (
+    typeof evidence.supportingEvidenceArtifactSha256 !== "string" ||
+    !/^[a-f0-9]{64}$/i.test(evidence.supportingEvidenceArtifactSha256)
+  ) {
+    failures.push(
+      createFailure(
+        relativePath,
+        "manualAttestation.supportingEvidenceArtifactSha256",
+        "Manual attestation requires a supporting evidence SHA256."
+      )
+    );
+  }
+}
+
+function validateExternalScrubEvidence(evidence, relativePath, failures) {
+  validateStringSet(
+    evidence.coveredSystems,
+    ["reverse-proxy", "cdn", "apm", "error-reporting"],
+    "manualAttestation.coveredSystems",
+    relativePath,
+    failures
+  );
+  validateStringSet(
+    evidence.credentialRouteClassesCovered,
+    ["staff-activation", "password-reset"],
+    "manualAttestation.credentialRouteClassesCovered",
+    relativePath,
+    failures
+  );
+  validateStringSet(
+    evidence.scrubbedFields,
+    [
+      "query-string",
+      "request-body",
+      "session-header",
+      "response-session-header",
+      "auth-header",
+    ],
+    "manualAttestation.scrubbedFields",
+    relativePath,
+    failures
+  );
+}
+
+function validateWebhookReceiverEvidence(evidence, relativePath, failures) {
+  const contract = evidence.receiverContract;
+
+  if (!isObject(contract)) {
+    failures.push(
+      createFailure(
+        relativePath,
+        "manualAttestation.receiverContract",
+        "Webhook receiver attestation requires receiverContract."
+      )
+    );
+    return;
+  }
+
+  const expectedValues = {
+    dedupeKey: "X-PSMS-Delivery-Id",
+    attemptHeaderDiagnosticOnly: true,
+    duplicateSuccessReturns2xx: true,
+    atomicPersistenceAttested: true,
+    dedupeRetentionLongerThanCredentialExpiry: true,
+    retryMaxAttemptsObserved: 1,
+  };
+
+  for (const [field, expected] of Object.entries(expectedValues)) {
+    if (contract[field] !== expected) {
+      failures.push(
+        createFailure(
+          relativePath,
+          `manualAttestation.receiverContract.${field}`,
+          `${field} does not match the receiver contract.`
+        )
+      );
+    }
+  }
+
+  validateStringSet(
+    contract.loggedMetadataAllowlist,
+    ["deliveryId", "attempt", "status", "timestamp", "failureClass"],
+    "manualAttestation.receiverContract.loggedMetadataAllowlist",
+    relativePath,
+    failures
+  );
+}
+
+function validateRollbackRehearsalEvidence(evidence, relativePath, failures) {
+  const rehearsal = evidence.rollbackRehearsal;
+
+  if (!isObject(rehearsal)) {
+    failures.push(
+      createFailure(
+        relativePath,
+        "manualAttestation.rollbackRehearsal",
+        "Rollback attestation requires rollbackRehearsal evidence."
+      )
+    );
+    return;
+  }
+
+  validateSafeOpaqueReference(
+    rehearsal.backupArtifactAlias,
+    "manualAttestation.rollbackRehearsal.backupArtifactAlias",
+    relativePath,
+    failures,
+    /^[A-Za-z0-9][A-Za-z0-9._:-]*[A-Za-z0-9]$/
+  );
+
+  if (
+    typeof rehearsal.backupArtifactSha256 !== "string" ||
+    !/^[a-f0-9]{64}$/i.test(rehearsal.backupArtifactSha256)
+  ) {
+    failures.push(
+      createFailure(
+        relativePath,
+        "manualAttestation.rollbackRehearsal.backupArtifactSha256",
+        "Rollback attestation requires a backup artifact SHA256."
+      )
+    );
+  }
+
+  for (const field of [
+    "migrationStatusChecked",
+    "applicationRestartChecked",
+    "dbRestoreOrRollbackRehearsed",
+  ]) {
+    if (rehearsal[field] !== true) {
+      failures.push(
+        createFailure(
+          relativePath,
+          `manualAttestation.rollbackRehearsal.${field}`,
+          `${field} must be true.`
+        )
+      );
+    }
+  }
+}
+
+function validateStringSet(
+  values,
+  expectedValues,
+  failureId,
+  relativePath,
+  failures
+) {
+  if (!Array.isArray(values)) {
+    failures.push(
+      createFailure(relativePath, failureId, `${failureId} must be an array.`)
+    );
+    return;
+  }
+
+  const actual = [...values].map(String).sort();
+  const expected = [...expectedValues].sort();
+
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    failures.push(
+      createFailure(
+        relativePath,
+        failureId,
+        `${failureId} must contain exactly the required values.`
+      )
+    );
+  }
+}
+
+function validateSafeOpaqueReference(
+  value,
+  failureId,
+  relativePath,
+  failures,
+  pattern = /^[A-Za-z0-9][A-Za-z0-9._-]*[A-Za-z0-9]$/
+) {
+  if (
+    typeof value !== "string" ||
+    value.length > 80 ||
+    !pattern.test(value) ||
+    /https?:|[\\/]|[?&=]|\bpostgres(?:ql)?:|\bbearer\b|\bauthorization\b|\bcookie\b|\bset-cookie\b|\bpassword\b|\btokenhash\b|\brawtoken\b/i.test(
+      value
+    )
+  ) {
+    failures.push(
+      createFailure(
+        relativePath,
+        failureId,
+        "Manual attestation reference must be a safe opaque value."
       )
     );
   }

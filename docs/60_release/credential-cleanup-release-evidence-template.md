@@ -275,6 +275,33 @@ validated zero-row dry-run artifact for the same release candidate. The helper d
 cleanup, does not infer release approval, and does not accept raw token ids, DSNs, cookies, headers, or
 copied shell history.
 
+## Manual / External Attestation Helper
+
+Manual and external release gates must use a structured attestation artifact. Do not use
+`release:evidence:write` with arbitrary JSON for these gates.
+
+Supported gates:
+
+| Gate                          | Scope             | Required result values      |
+| ----------------------------- | ----------------- | --------------------------- |
+| `external-scrub-attestation`  | external systems  | `PASS`, `BLOCK`, or `NO-GO` |
+| `webhook-receiver-log-policy` | external receiver | `PASS`, `BLOCK`, or `NO-GO` |
+| `rollback-rehearsal`          | release rollback  | `PASS`, `BLOCK`, or `NO-GO` |
+
+Example:
+
+```powershell
+pnpm release:evidence:attest --gate external-scrub-attestation --result PASS --release-candidate-id release-20260508-local --created-at 2026-05-08T05:30:00.000Z --attested-at 2026-05-08T05:25:00.000Z --attestation-reference EXT-SCRUB-20260508 --supporting-evidence-artifact release-evidence/20260508/manual-attestation-support/external-scrub-attestation.md --supporting-evidence-sha256 <sha256> --owner external-owner --reviewer security-reviewer --query-string-scrubbed true --body-scrubbed true --session-headers-scrubbed true --set-cookie-header-scrubbed true --auth-header-scrubbed true --telemetry-scrubbed true --external-owner-attested true
+```
+
+Gate-specific `PASS` artifacts require every required control to be `true`, a reviewer distinct from
+the owner, a safe opaque `attestationReference`, and a safe support artifact path/SHA. Incomplete or
+unreviewed attestations must be recorded as `BLOCK` or `NO-GO` with an allowlisted `blockReason`.
+
+The validator rejects generic manual/external `PASS` artifacts that do not include the structured
+attestation fields. `N/A-NoRows` is not allowed for manual/external gates, and `N/A-SQLite-only` is
+allowed only for PostgreSQL-specific gates.
+
 ## Command Capture
 
 Allow-listed release commands can be captured directly into validator-compatible artifacts:
@@ -340,6 +367,7 @@ pnpm test:unit:production-release-gate
 pnpm test:unit:release-evidence-validate
 pnpm test:unit:release-evidence-write
 pnpm test:unit:release-evidence-capture
+pnpm test:unit:release-evidence-attest
 pnpm release:gate:logs
 pnpm format:check
 ```
