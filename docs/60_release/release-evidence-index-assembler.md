@@ -74,7 +74,8 @@ or allowed `N/A-*` statuses.
 Allowed `N/A-*` remains governed by
 `docs/60_release/credential-cleanup-release-evidence-template.md` and the validator:
 
-- `N/A-NoRows` only for cleanup confirm/auditlog evidence with zero candidates.
+- `N/A-NoRows` only for cleanup confirm/auditlog evidence linked to the latest validated zero-row
+  `credential-cleanup-dry-run` artifact for the same release candidate.
 - `N/A-SQLite-only` only for PostgreSQL-specific gates.
 
 ## No Secret Rule

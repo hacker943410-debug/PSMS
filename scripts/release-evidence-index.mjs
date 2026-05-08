@@ -105,6 +105,10 @@ export const DEFAULT_REQUIRED_GATES = [
 ];
 
 const PASSING_RESULTS = new Set(["PASS", "N/A-SQLite-only", "N/A-NoRows"]);
+const NO_ROWS_GATES = new Set([
+  "credential-cleanup-confirm",
+  "credential-cleanup-auditlog",
+]);
 
 export async function buildReleaseEvidenceIndex(inputPath, options = {}) {
   const requiredGates = options.requiredGates ?? DEFAULT_REQUIRED_GATES;
@@ -182,6 +186,8 @@ export async function buildReleaseEvidenceIndex(inputPath, options = {}) {
     })
   );
 
+  applyNoRowsDryRunEvidence(rows, latestByGate);
+
   for (const invalid of invalidArtifacts) {
     rows.push({
       gate: invalid.gate || "invalid-artifact",
@@ -245,6 +251,42 @@ export async function buildReleaseEvidenceIndex(inputPath, options = {}) {
     passLikeCount,
     rows,
   };
+}
+
+function applyNoRowsDryRunEvidence(rows, latestByGate) {
+  const dryRunItem = latestByGate.get("credential-cleanup-dry-run");
+
+  for (const row of rows) {
+    if (row.result !== "N/A-NoRows" || !NO_ROWS_GATES.has(row.gate)) {
+      continue;
+    }
+
+    const item = latestByGate.get(row.gate);
+    const artifact = item?.artifact;
+    const dryRunArtifact = dryRunItem?.artifact;
+    const expectedDryRunPath = dryRunItem?.file?.replaceAll("\\", "/");
+
+    if (
+      !artifact ||
+      !dryRunArtifact ||
+      dryRunArtifact.gate !== "credential-cleanup-dry-run" ||
+      dryRunArtifact.result !== "PASS" ||
+      dryRunArtifact.summary?.candidateCount !== 0 ||
+      dryRunArtifact.summary?.cleanedCount !== 0 ||
+      dryRunArtifact.summary?.auditLogCount !== 0 ||
+      dryRunArtifact.evidence?.dryRun !== true ||
+      dryRunArtifact.evidence?.candidateCount !== 0 ||
+      artifact.evidence?.linkedDryRunArtifactPath !== expectedDryRunPath ||
+      artifact.evidence?.linkedDryRunArtifactSha256 !==
+        dryRunArtifact.artifactSha256 ||
+      artifact.evidence?.linkedDryRunResult !== "PASS" ||
+      artifact.evidence?.linkedDryRunCandidateCount !== 0
+    ) {
+      row.result = "BLOCK";
+      row.status = "BLOCK";
+      row.notes = "N/A-NoRows requires linked latest zero-row dry-run evidence";
+    }
+  }
 }
 
 export function formatReleaseEvidenceIndexMarkdown(report) {

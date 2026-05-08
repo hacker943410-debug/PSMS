@@ -242,6 +242,19 @@ limbo token scan row count가 `0`이면 cleanup confirm과 AuditLog evidence는
 `N/A-NoRows`로 기록할 수 있다. row count가 `> 0`인데 cleanup confirm 또는 AuditLog
 evidence가 없으면 release readiness는 `BLOCK`이다.
 
+zero-row dry-run evidence가 이미 validator를 통과했다면 no-row confirm/audit evidence는 아래
+helper로 생성한다.
+
+```powershell
+pnpm release:evidence:cleanup-no-rows --dry-run-artifact <validated-dry-run-artifact-path> --created-at <ISO-UTC>
+```
+
+이 helper는 dry-run artifact가 `credential-cleanup-dry-run`, `PASS`, `candidateCount = 0`인 경우에만
+`credential-cleanup-confirm`과 `credential-cleanup-auditlog`의 `N/A-NoRows` artifacts를 작성한다.
+candidateCount가 `> 0`이면 confirm/audit 실행 evidence가 필요하므로 helper는 실패해야 한다. index
+assembler는 `N/A-NoRows` artifact가 같은 release candidate의 최신 zero-row dry-run artifact path와
+SHA256에 연결되어 있을 때만 satisfied로 취급한다.
+
 ## Validation Commands
 
 credential delivery 또는 compensation cleanup 관련 변경 후 최소 아래 명령을 실행한다.

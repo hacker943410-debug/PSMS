@@ -174,6 +174,14 @@ describe("release evidence validator", () => {
         auditLogCount: 0,
         secretScanPassed: true,
       },
+      evidence: {
+        noRows: true,
+        linkedDryRunArtifactPath:
+          "release-evidence/20990101/credential-cleanup-dry-run/20990101-143000-credential-cleanup-dry-run-PASS.json",
+        linkedDryRunArtifactSha256: "a".repeat(64),
+        linkedDryRunResult: "PASS",
+        linkedDryRunCandidateCount: 0,
+      },
     });
 
     assert.deepEqual(
@@ -199,6 +207,47 @@ describe("release evidence validator", () => {
           artifactPath("credential-cleanup-confirm", "NA-NoRows")
         )
       ).includes("result.NA-NoRows")
+    );
+  });
+
+  it("rejects N/A-NoRows artifacts without linked zero-row dry-run evidence", () => {
+    const missingLink = baseArtifact({
+      gate: "credential-cleanup-auditlog",
+      result: "N/A-NoRows",
+      exitCode: "N/A",
+      evidence: {
+        noRows: true,
+      },
+    });
+    const badCount = baseArtifact({
+      gate: "credential-cleanup-auditlog",
+      result: "N/A-NoRows",
+      exitCode: "N/A",
+      evidence: {
+        noRows: true,
+        linkedDryRunArtifactPath:
+          "release-evidence/20990101/credential-cleanup-dry-run/20990101-143000-credential-cleanup-dry-run-PASS.json",
+        linkedDryRunArtifactSha256: "a".repeat(64),
+        linkedDryRunResult: "PASS",
+        linkedDryRunCandidateCount: 1,
+      },
+    });
+
+    assert.ok(
+      failureIds(
+        validate(
+          missingLink,
+          artifactPath("credential-cleanup-auditlog", "NA-NoRows")
+        )
+      ).includes("evidence.linkedDryRunArtifactPath")
+    );
+    assert.ok(
+      failureIds(
+        validate(
+          badCount,
+          artifactPath("credential-cleanup-auditlog", "NA-NoRows")
+        )
+      ).includes("evidence.linkedDryRunCandidateCount")
     );
   });
 

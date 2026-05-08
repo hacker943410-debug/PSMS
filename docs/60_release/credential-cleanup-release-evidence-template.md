@@ -254,6 +254,27 @@ pnpm release:evidence:write --gate credential-cleanup-dry-run --result PASS --re
 The writer computes canonical `artifactSha256`, fills standard scanner/retention/quarantine
 metadata, validates the artifact before writing, and refuses to overwrite an existing artifact.
 
+## Cleanup No-Rows Helper
+
+When a validated cleanup dry-run artifact has `summary.candidateCount = 0`, the confirm and AuditLog
+rows can be generated as `N/A-NoRows` artifacts with:
+
+```powershell
+pnpm release:evidence:cleanup-no-rows --dry-run-artifact release-evidence/20260508/credential-cleanup-dry-run/20260508-053000-credential-cleanup-dry-run-PASS.json --created-at 2026-05-08T05:31:00.000Z
+```
+
+The helper first validates the referenced dry-run artifact. It refuses to write no-row evidence unless
+the dry-run artifact is `credential-cleanup-dry-run`, `PASS`, and has zero candidates. It then writes:
+
+- `credential-cleanup-confirm` with `result: "N/A-NoRows"`
+- `credential-cleanup-auditlog` with `result: "N/A-NoRows"`
+
+The generated artifacts link back to the dry-run artifact path and SHA256. The validator requires this
+link, and the index assembler treats `N/A-NoRows` as satisfied only when it points to the latest
+validated zero-row dry-run artifact for the same release candidate. The helper does not execute
+cleanup, does not infer release approval, and does not accept raw token ids, DSNs, cookies, headers, or
+copied shell history.
+
 ## Command Capture
 
 Allow-listed release commands can be captured directly into validator-compatible artifacts:

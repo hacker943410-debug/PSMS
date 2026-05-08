@@ -670,6 +670,10 @@ function validateEvidence(artifact, relativePath, failures) {
     );
   }
 
+  if (artifact.result === "N/A-NoRows") {
+    validateNoRowsDryRunLink(artifact, relativePath, failures);
+  }
+
   if (
     artifact.result === "PASS" &&
     artifact.commandName === "pg:profile:preflight" &&
@@ -750,6 +754,85 @@ function validateEvidence(artifact, relativePath, failures) {
   }
 
   validateCleanupCountConsistency(artifact, relativePath, failures);
+}
+
+function validateNoRowsDryRunLink(artifact, relativePath, failures) {
+  const evidence = artifact.evidence;
+
+  if (!isObject(evidence)) {
+    return;
+  }
+
+  if (
+    artifact.summary?.cleanedCount !== 0 ||
+    artifact.summary?.auditLogCount !== 0
+  ) {
+    failures.push(
+      createFailure(
+        relativePath,
+        "result.NA-NoRows.summary",
+        "N/A-NoRows requires cleanedCount and auditLogCount to be 0."
+      )
+    );
+  }
+
+  if (evidence.noRows !== true) {
+    failures.push(
+      createFailure(
+        relativePath,
+        "evidence.noRows",
+        "N/A-NoRows evidence requires noRows true."
+      )
+    );
+  }
+
+  if (
+    typeof evidence.linkedDryRunArtifactPath !== "string" ||
+    !/^release-evidence\/\d{8}\/credential-cleanup-dry-run\/\d{8}-\d{6}-credential-cleanup-dry-run-PASS\.json$/.test(
+      evidence.linkedDryRunArtifactPath
+    )
+  ) {
+    failures.push(
+      createFailure(
+        relativePath,
+        "evidence.linkedDryRunArtifactPath",
+        "N/A-NoRows evidence must link to a credential-cleanup-dry-run PASS artifact path."
+      )
+    );
+  }
+
+  if (
+    typeof evidence.linkedDryRunArtifactSha256 !== "string" ||
+    !/^[a-f0-9]{64}$/i.test(evidence.linkedDryRunArtifactSha256)
+  ) {
+    failures.push(
+      createFailure(
+        relativePath,
+        "evidence.linkedDryRunArtifactSha256",
+        "N/A-NoRows evidence must link to a dry-run artifact SHA256."
+      )
+    );
+  }
+
+  if (evidence.linkedDryRunResult !== "PASS") {
+    failures.push(
+      createFailure(
+        relativePath,
+        "evidence.linkedDryRunResult",
+        "N/A-NoRows evidence requires linkedDryRunResult PASS."
+      )
+    );
+  }
+
+  if (evidence.linkedDryRunCandidateCount !== 0) {
+    failures.push(
+      createFailure(
+        relativePath,
+        "evidence.linkedDryRunCandidateCount",
+        "N/A-NoRows evidence requires linkedDryRunCandidateCount 0."
+      )
+    );
+  }
 }
 
 function validateCleanupCountConsistency(artifact, relativePath, failures) {

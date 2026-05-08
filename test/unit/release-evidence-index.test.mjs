@@ -216,6 +216,136 @@ describe("release evidence index assembler", () => {
     }
   });
 
+  it("blocks N/A-NoRows rows without linked latest zero-row dry-run evidence", async () => {
+    await rm(outputPath, { force: true, recursive: true });
+
+    try {
+      await writeReleaseEvidenceArtifact(
+        baseInput({
+          gate: "credential-cleanup-confirm",
+          result: "N/A-NoRows",
+          createdAt: new Date("2099-01-04T05:34:00.000Z"),
+          exitCode: "N/A",
+          commandName: "release:evidence:cleanup-no-rows",
+          commandTemplate:
+            "pnpm release:evidence:cleanup-no-rows --dry-run-artifact <artifact-path>",
+          evidence: {
+            noRows: true,
+            linkedDryRunArtifactPath:
+              "release-evidence/20990104/credential-cleanup-dry-run/20990104-053000-credential-cleanup-dry-run-PASS.json",
+            linkedDryRunArtifactSha256: "a".repeat(64),
+            linkedDryRunResult: "PASS",
+            linkedDryRunCandidateCount: 0,
+          },
+        })
+      );
+
+      const report = await buildReleaseEvidenceIndex(
+        `release-evidence/${releaseDate}`,
+        {
+          requiredGates: [requiredGates[1]],
+          releaseCandidateId,
+        }
+      );
+      const row = report.rows[0];
+
+      assert.equal(report.ok, false);
+      assert.equal(row.result, "BLOCK");
+      assert.equal(row.status, "BLOCK");
+      assert.match(row.notes, /linked latest zero-row dry-run/);
+    } finally {
+      await rm(outputPath, { force: true, recursive: true });
+    }
+  });
+
+  it("blocks N/A-NoRows rows when a newer dry-run has rows", async () => {
+    await rm(outputPath, { force: true, recursive: true });
+
+    try {
+      const zeroDryRun = await writeReleaseEvidenceArtifact(
+        baseInput({
+          gate: "credential-cleanup-dry-run",
+          commandName: "ops:credential-compensation-cleanup",
+          commandTemplate: "pnpm ops:credential-compensation-cleanup",
+          createdAt: new Date("2099-01-04T05:30:00.000Z"),
+          evidence: {
+            dryRun: true,
+            detectionWindowMinutes: 10,
+            candidateCount: 0,
+            candidateIds: [],
+            candidates: [],
+          },
+        })
+      );
+      await writeReleaseEvidenceArtifact(
+        baseInput({
+          gate: "credential-cleanup-confirm",
+          result: "N/A-NoRows",
+          createdAt: new Date("2099-01-04T05:31:00.000Z"),
+          exitCode: "N/A",
+          commandName: "release:evidence:cleanup-no-rows",
+          commandTemplate:
+            "pnpm release:evidence:cleanup-no-rows --dry-run-artifact <artifact-path>",
+          evidence: {
+            noRows: true,
+            linkedDryRunArtifactPath: zeroDryRun.artifactPath,
+            linkedDryRunArtifactSha256: zeroDryRun.artifactSha256,
+            linkedDryRunResult: "PASS",
+            linkedDryRunCandidateCount: 0,
+          },
+        })
+      );
+      await writeReleaseEvidenceArtifact(
+        baseInput({
+          gate: "credential-cleanup-dry-run",
+          commandName: "ops:credential-compensation-cleanup",
+          commandTemplate: "pnpm ops:credential-compensation-cleanup",
+          createdAt: new Date("2099-01-04T05:32:00.000Z"),
+          summary: {
+            candidateCount: 1,
+            cleanedCount: 0,
+            auditLogCount: 0,
+            secretScanPassed: true,
+          },
+          evidence: {
+            dryRun: true,
+            detectionWindowMinutes: 10,
+            candidateCount: 1,
+            candidateIds: ["cleanup_1"],
+            candidates: [
+              {
+                tokenId: "cleanup_1",
+                userId: "user_1",
+                purpose: "STAFF_ACTIVATION",
+                createdAt: "2099-01-04T05:00:00.000Z",
+                expiresAt: "2099-01-04T06:00:00.000Z",
+                createdById: "admin_1",
+                hadActiveKey: false,
+                hadUsedAt: false,
+                hadRevokedAt: false,
+                detectionWindowMinutes: 10,
+              },
+            ],
+          },
+        })
+      );
+
+      const report = await buildReleaseEvidenceIndex(
+        `release-evidence/${releaseDate}`,
+        {
+          requiredGates: [requiredGates[1]],
+          releaseCandidateId,
+        }
+      );
+
+      assert.equal(report.ok, false);
+      assert.equal(report.rows[0].result, "BLOCK");
+      assert.match(report.rows[0].notes, /linked latest zero-row dry-run/);
+    } finally {
+      await rm(outputPath, { force: true, recursive: true });
+    }
+  });
+
   it("adds invalid artifacts as BLOCK rows without echoing secret values", async () => {
     await rm(outputPath, { force: true, recursive: true });
 
