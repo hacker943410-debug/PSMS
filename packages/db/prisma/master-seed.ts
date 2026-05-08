@@ -156,6 +156,7 @@ export const MASTER_SEED_EXPECTED_COUNTS = {
   users: 6,
   sessions: 0,
   activeSessions: 0,
+  userPasswordTokens: 0,
   auditLogs: 0,
   carriers: 4,
   salesAgencies: 8,

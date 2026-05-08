@@ -165,6 +165,23 @@ export type DateTimeWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedDateTimeFilter<$PrismaModel>
 }
 
+export type EnumUserPasswordTokenPurposeFilter<$PrismaModel = never> = {
+  equals?: $Enums.UserPasswordTokenPurpose | Prisma.EnumUserPasswordTokenPurposeFieldRefInput<$PrismaModel>
+  in?: $Enums.UserPasswordTokenPurpose[]
+  notIn?: $Enums.UserPasswordTokenPurpose[]
+  not?: Prisma.NestedEnumUserPasswordTokenPurposeFilter<$PrismaModel> | $Enums.UserPasswordTokenPurpose
+}
+
+export type EnumUserPasswordTokenPurposeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.UserPasswordTokenPurpose | Prisma.EnumUserPasswordTokenPurposeFieldRefInput<$PrismaModel>
+  in?: $Enums.UserPasswordTokenPurpose[]
+  notIn?: $Enums.UserPasswordTokenPurpose[]
+  not?: Prisma.NestedEnumUserPasswordTokenPurposeWithAggregatesFilter<$PrismaModel> | $Enums.UserPasswordTokenPurpose
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumUserPasswordTokenPurposeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumUserPasswordTokenPurposeFilter<$PrismaModel>
+}
+
 export type EnumCommonStatusFilter<$PrismaModel = never> = {
   equals?: $Enums.CommonStatus | Prisma.EnumCommonStatusFieldRefInput<$PrismaModel>
   in?: $Enums.CommonStatus[]
@@ -623,6 +640,23 @@ export type NestedDateTimeWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedDateTimeFilter<$PrismaModel>
   _max?: Prisma.NestedDateTimeFilter<$PrismaModel>
+}
+
+export type NestedEnumUserPasswordTokenPurposeFilter<$PrismaModel = never> = {
+  equals?: $Enums.UserPasswordTokenPurpose | Prisma.EnumUserPasswordTokenPurposeFieldRefInput<$PrismaModel>
+  in?: $Enums.UserPasswordTokenPurpose[]
+  notIn?: $Enums.UserPasswordTokenPurpose[]
+  not?: Prisma.NestedEnumUserPasswordTokenPurposeFilter<$PrismaModel> | $Enums.UserPasswordTokenPurpose
+}
+
+export type NestedEnumUserPasswordTokenPurposeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.UserPasswordTokenPurpose | Prisma.EnumUserPasswordTokenPurposeFieldRefInput<$PrismaModel>
+  in?: $Enums.UserPasswordTokenPurpose[]
+  notIn?: $Enums.UserPasswordTokenPurpose[]
+  not?: Prisma.NestedEnumUserPasswordTokenPurposeWithAggregatesFilter<$PrismaModel> | $Enums.UserPasswordTokenPurpose
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumUserPasswordTokenPurposeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumUserPasswordTokenPurposeFilter<$PrismaModel>
 }
 
 export type NestedEnumCommonStatusFilter<$PrismaModel = never> = {

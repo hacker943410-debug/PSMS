@@ -25,6 +25,14 @@ export const UserStatus = {
 export type UserStatus = (typeof UserStatus)[keyof typeof UserStatus]
 
 
+export const UserPasswordTokenPurpose = {
+  STAFF_ACTIVATION: 'STAFF_ACTIVATION',
+  PASSWORD_RESET: 'PASSWORD_RESET'
+} as const
+
+export type UserPasswordTokenPurpose = (typeof UserPasswordTokenPurpose)[keyof typeof UserPasswordTokenPurpose]
+
+
 export const CommonStatus = {
   ACTIVE: 'ACTIVE',
   INACTIVE: 'INACTIVE'

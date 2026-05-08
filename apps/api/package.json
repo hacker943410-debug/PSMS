@@ -9,7 +9,7 @@
     "lint": "tsc --noEmit --pretty false",
     "start": "tsx src/server.ts",
     "test": "pnpm test:inject",
-    "test:inject": "tsx ../../test/smoke/api-auth-inject-smoke.ts && tsx ../../test/smoke/api-admin-guard-inject-smoke.ts && tsx ../../test/smoke/api-admin-read-inject-smoke.ts && tsx ../../test/smoke/api-admin-staff-mutation-inject-smoke.ts",
+    "test:inject": "tsx ../../test/smoke/api-auth-inject-smoke.ts && tsx ../../test/smoke/api-admin-guard-inject-smoke.ts && tsx ../../test/smoke/api-admin-read-inject-smoke.ts && tsx ../../test/smoke/api-admin-staff-mutation-inject-smoke.ts && tsx ../../test/smoke/api-credential-token-inject-smoke.ts",
     "test:smoke": "node ../../test/smoke/auth-smoke.mjs",
     "typecheck": "tsc --noEmit"
   },

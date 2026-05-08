@@ -23,4 +23,5 @@ export type {
   StaffCommissionPolicy,
   Store,
   User,
+  UserPasswordToken,
 } from "./generated/prisma/client";

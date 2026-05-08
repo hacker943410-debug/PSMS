@@ -4,9 +4,16 @@ import type { ReactNode } from "react";
 import { useActionState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
+import { KeyRound, Send, Undo2, X } from "lucide-react";
 
 import { Button, SelectInput, TextInput } from "@/components/workspace";
+import {
+  issuePasswordResetCredentialAction,
+  issueStaffActivationCredentialAction,
+  revokePasswordResetCredentialAction,
+  revokeStaffActivationCredentialAction,
+  type StaffCredentialActionState,
+} from "@/server/actions/admin-staff-credential.actions";
 import {
   changeStaffStatusAction,
   createStaffAction,
@@ -15,8 +22,10 @@ import {
 } from "@/server/actions/admin-staff.actions";
 import type {
   AdminRecordStatus,
+  AdminStaffCredentialRequestSummary,
   AdminStaffDetail,
   AdminStaffPageData,
+  CredentialDeliveryMode,
 } from "@psms/shared";
 
 type StaffDrawerKind = "create" | "detail" | "edit";
@@ -36,6 +45,10 @@ const footerLinkClass =
   "inline-flex h-10 min-h-10 items-center justify-center rounded-md border border-slate-200 bg-white px-3.5 text-sm font-semibold text-slate-700 shadow-sm shadow-slate-200/70 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 focus-visible:ring-offset-2";
 
 const initialStaffMutationActionState: StaffMutationActionState = {
+  ok: false,
+};
+
+const initialStaffCredentialActionState: StaffCredentialActionState = {
   ok: false,
 };
 
@@ -98,6 +111,294 @@ function MessageBox({ state }: { state: StaffMutationActionState }) {
       aria-live="polite"
     >
       {state.message}
+    </div>
+  );
+}
+
+function CredentialMessageBox({
+  state,
+}: {
+  state: StaffCredentialActionState;
+}) {
+  if (!state.message) {
+    return null;
+  }
+
+  return (
+    <div
+      className={[
+        "rounded-md border px-3 py-2 text-xs font-semibold leading-5",
+        state.ok
+          ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+          : "border-rose-200 bg-rose-50 text-rose-800",
+      ].join(" ")}
+      aria-live="polite"
+    >
+      <p>{state.message}</p>
+      {state.ok && state.revokedPreviousTokenCount !== undefined ? (
+        <p className="mt-1 font-medium">
+          이전 미사용 요청 회수 {state.revokedPreviousTokenCount}건
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function CredentialActionForm({
+  action,
+  buttonLabel,
+  disabled,
+  disabledLabel,
+  expectedUpdatedAt,
+  icon,
+  reasonLabel,
+  state,
+  userId,
+  variant,
+}: {
+  action: (payload: FormData) => void;
+  buttonLabel: string;
+  disabled: boolean;
+  disabledLabel?: string;
+  expectedUpdatedAt: string;
+  icon: typeof Send;
+  reasonLabel: string;
+  state: StaffCredentialActionState;
+  userId: string;
+  variant: "primary" | "danger";
+}) {
+  return (
+    <form action={action} className="space-y-2">
+      <input type="hidden" name="userId" value={userId} />
+      <input type="hidden" name="expectedUpdatedAt" value={expectedUpdatedAt} />
+      <DrawerField
+        label={reasonLabel}
+        required
+        error={state.fieldErrors?.reason}
+      >
+        <TextInput
+          name="reason"
+          placeholder="처리 사유를 입력하세요"
+          maxLength={200}
+          disabled={disabled}
+          className={drawerInputClass}
+          aria-invalid={state.fieldErrors?.reason ? "true" : undefined}
+        />
+      </DrawerField>
+      <Button
+        type="submit"
+        variant={variant}
+        icon={icon}
+        disabled={disabled}
+        className="!h-10 !min-h-10 !w-full !text-sm"
+      >
+        {disabled ? (disabledLabel ?? "처리 중") : buttonLabel}
+      </Button>
+      <CredentialMessageBox state={state} />
+    </form>
+  );
+}
+
+function formatCredentialDateTime(value: string | null) {
+  if (!value) {
+    return "-";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat("ko-KR", {
+    dateStyle: "short",
+    timeStyle: "short",
+    hour12: false,
+  }).format(date);
+}
+
+function deliveryModeText(mode: CredentialDeliveryMode | null) {
+  if (!mode) {
+    return "승인된 전달 채널";
+  }
+
+  return "승인된 전달 채널";
+}
+
+function CredentialRequestStatusCard({
+  accessLabel,
+  request,
+}: {
+  accessLabel: string;
+  request: AdminStaffCredentialRequestSummary;
+}) {
+  const isPending = request.status === "PENDING";
+
+  return (
+    <div
+      className={[
+        "rounded-md border px-3 py-3 text-xs leading-5",
+        isPending
+          ? "border-amber-200 bg-amber-50 text-amber-900"
+          : "border-slate-200 bg-white text-slate-600",
+      ].join(" ")}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="font-bold">
+          {isPending ? `${accessLabel} 요청 대기 중` : "대기 중인 요청 없음"}
+        </p>
+        <span
+          className={[
+            "rounded-md border px-2 py-1 font-bold",
+            isPending
+              ? "border-amber-300 bg-amber-100 text-amber-900"
+              : "border-slate-200 bg-slate-50 text-slate-500",
+          ].join(" ")}
+        >
+          {isPending ? "대기" : "없음"}
+        </span>
+      </div>
+      <p className="mt-2 font-medium">
+        {isPending
+          ? `${deliveryModeText(
+              request.deliveryMode
+            )}로 보낸 ${accessLabel} 요청이 아직 사용되지 않았습니다.`
+          : "현재 미사용 계정 접근 요청이 없습니다."}
+      </p>
+      {isPending ? (
+        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 font-semibold">
+          <span>만료 {formatCredentialDateTime(request.expiresAt)}</span>
+          {request.issuedByName ? (
+            <span>처리자 {request.issuedByName}</span>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function StaffCredentialPanel({
+  staff,
+  issueActivationAction,
+  issueActivationPending,
+  issueActivationState,
+  revokeActivationAction,
+  revokeActivationPending,
+  revokeActivationState,
+  issuePasswordResetAction,
+  issuePasswordResetPending,
+  issuePasswordResetState,
+  revokePasswordResetAction,
+  revokePasswordResetPending,
+  revokePasswordResetState,
+}: {
+  staff: AdminStaffDetail;
+  issueActivationAction: (payload: FormData) => void;
+  issueActivationPending: boolean;
+  issueActivationState: StaffCredentialActionState;
+  revokeActivationAction: (payload: FormData) => void;
+  revokeActivationPending: boolean;
+  revokeActivationState: StaffCredentialActionState;
+  issuePasswordResetAction: (payload: FormData) => void;
+  issuePasswordResetPending: boolean;
+  issuePasswordResetState: StaffCredentialActionState;
+  revokePasswordResetAction: (payload: FormData) => void;
+  revokePasswordResetPending: boolean;
+  revokePasswordResetState: StaffCredentialActionState;
+}) {
+  const isStaffRole = staff.role === "STAFF";
+  const isActive = staff.status === "ACTIVE";
+  const issueState = isActive ? issuePasswordResetState : issueActivationState;
+  const revokeState = isActive
+    ? revokePasswordResetState
+    : revokeActivationState;
+  const issueAction = isActive
+    ? issuePasswordResetAction
+    : issueActivationAction;
+  const revokeAction = isActive
+    ? revokePasswordResetAction
+    : revokeActivationAction;
+  const issuePending = isActive
+    ? issuePasswordResetPending
+    : issueActivationPending;
+  const revokePending = isActive
+    ? revokePasswordResetPending
+    : revokeActivationPending;
+  const accessLabel = isActive ? "접근 재설정" : "활성화";
+  const requestState = isActive
+    ? staff.credentialRequests.passwordReset
+    : staff.credentialRequests.activation;
+  const revokeDisabled =
+    revokePending ||
+    requestState.status !== "PENDING" ||
+    requestState.canRevoke !== true;
+
+  return (
+    <div className="space-y-4 rounded-lg border border-slate-200 px-4 py-4">
+      <div className="flex items-start gap-3">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600">
+          <KeyRound className="size-4" aria-hidden />
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-bold leading-4 text-slate-700">
+            계정 접근 요청
+          </p>
+          <p className="mt-1 text-xs font-medium leading-5 text-slate-500">
+            승인된 전달 채널로만 요청을 보내며 화면에는 민감한 값을 표시하지
+            않습니다.
+          </p>
+        </div>
+      </div>
+
+      {!isStaffRole ? (
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-3 text-xs font-semibold leading-5 text-amber-800">
+          관리자 계정의 접근 요청은 별도 승인 절차에서 처리합니다.
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          <div className="rounded-md border border-slate-100 bg-slate-50 px-3 py-3 text-xs font-medium leading-5 text-slate-600">
+            {isActive
+              ? "활성 직원에게 접근 재설정 요청을 발급하거나 미사용 요청을 회수합니다."
+              : "비활성 직원에게 활성화 요청을 발급하거나 미사용 요청을 회수합니다."}
+          </div>
+
+          <CredentialRequestStatusCard
+            accessLabel={accessLabel}
+            request={requestState}
+          />
+
+          <div className="rounded-md border border-slate-100 bg-slate-50 px-3 py-3 text-xs font-medium leading-5 text-slate-600">
+            {requestState.status === "PENDING"
+              ? "요청을 회수하면 기존 접근 요청은 더 이상 사용할 수 없습니다."
+              : "새 요청을 발급하면 이전 미사용 요청은 회수됩니다."}
+          </div>
+
+          <CredentialActionForm
+            action={issueAction}
+            buttonLabel={`${accessLabel} 요청 발급`}
+            disabled={issuePending}
+            expectedUpdatedAt={staff.updatedAt}
+            icon={Send}
+            reasonLabel={`${accessLabel} 요청 발급 사유`}
+            state={issueState}
+            userId={staff.id}
+            variant="primary"
+          />
+
+          <CredentialActionForm
+            action={revokeAction}
+            buttonLabel={`${accessLabel} 요청 회수`}
+            disabled={revokeDisabled}
+            disabledLabel={revokePending ? undefined : "회수할 요청 없음"}
+            expectedUpdatedAt={staff.updatedAt}
+            icon={Undo2}
+            reasonLabel={`${accessLabel} 요청 회수 사유`}
+            state={revokeState}
+            userId={staff.id}
+            variant="danger"
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -270,12 +571,61 @@ function DetailStaffPanel({
     changeStaffStatusAction,
     initialStaffMutationActionState
   );
+  const [
+    issueActivationState,
+    issueActivationAction,
+    isIssueActivationPending,
+  ] = useActionState(
+    issueStaffActivationCredentialAction,
+    initialStaffCredentialActionState
+  );
+  const [
+    revokeActivationState,
+    revokeActivationAction,
+    isRevokeActivationPending,
+  ] = useActionState(
+    revokeStaffActivationCredentialAction,
+    initialStaffCredentialActionState
+  );
+  const [
+    issuePasswordResetState,
+    issuePasswordResetAction,
+    isIssuePasswordResetPending,
+  ] = useActionState(
+    issuePasswordResetCredentialAction,
+    initialStaffCredentialActionState
+  );
+  const [
+    revokePasswordResetState,
+    revokePasswordResetAction,
+    isRevokePasswordResetPending,
+  ] = useActionState(
+    revokePasswordResetCredentialAction,
+    initialStaffCredentialActionState
+  );
 
   useEffect(() => {
     if (statusState.ok) {
       router.refresh();
     }
   }, [router, statusState.ok]);
+
+  useEffect(() => {
+    if (
+      issueActivationState.ok ||
+      revokeActivationState.ok ||
+      issuePasswordResetState.ok ||
+      revokePasswordResetState.ok
+    ) {
+      router.refresh();
+    }
+  }, [
+    issueActivationState.ok,
+    issuePasswordResetState.ok,
+    revokeActivationState.ok,
+    revokePasswordResetState.ok,
+    router,
+  ]);
 
   const targetStatus = nextStatus(staff.status);
 
@@ -328,6 +678,22 @@ function DetailStaffPanel({
             {statusText(staff.status)} 상태입니다.
           </p>
         </div>
+
+        <StaffCredentialPanel
+          staff={staff}
+          issueActivationAction={issueActivationAction}
+          issueActivationPending={isIssueActivationPending}
+          issueActivationState={issueActivationState}
+          revokeActivationAction={revokeActivationAction}
+          revokeActivationPending={isRevokeActivationPending}
+          revokeActivationState={revokeActivationState}
+          issuePasswordResetAction={issuePasswordResetAction}
+          issuePasswordResetPending={isIssuePasswordResetPending}
+          issuePasswordResetState={issuePasswordResetState}
+          revokePasswordResetAction={revokePasswordResetAction}
+          revokePasswordResetPending={isRevokePasswordResetPending}
+          revokePasswordResetState={revokePasswordResetState}
+        />
 
         <form
           action={statusAction}

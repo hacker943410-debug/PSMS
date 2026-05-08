@@ -2,6 +2,7 @@ import Fastify from "fastify";
 
 import { registerAdminRoutes } from "./routes/admin/admin.routes";
 import { registerAuthRoutes } from "./routes/auth.routes";
+import { registerCredentialTokenRoutes } from "./routes/credential-token.routes";
 import { registerHealthRoutes } from "./routes/health.routes";
 
 export async function createApiApp() {
@@ -14,11 +15,21 @@ export async function createApiApp() {
                 "req.headers.authorization",
                 "req.headers.cookie",
                 "res.headers.set-cookie",
+                "req.body.confirmPassword",
                 "req.body.password",
+                "req.body.rawToken",
+                "req.body.token",
+                "req.body.tokenHash",
+                "activationUrl",
+                "confirmPassword",
+                "password",
                 "req.body.sessionToken",
+                "rawToken",
+                "resetUrl",
                 "sessionToken",
                 "sessionTokenHash",
                 "passwordHash",
+                "tokenHash",
               ],
               censor: "[redacted]",
             },
@@ -40,6 +51,7 @@ export async function createApiApp() {
 
   await registerHealthRoutes(app);
   await registerAuthRoutes(app);
+  await registerCredentialTokenRoutes(app);
   await registerAdminRoutes(app);
 
   return app;

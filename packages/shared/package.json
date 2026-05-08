@@ -10,6 +10,7 @@
     "./admin.validation": "./src/admin.validation.ts",
     "./auth": "./src/auth.ts",
     "./auth.validation": "./src/auth.validation.ts",
+    "./credential-token": "./src/credential-token.ts",
     "./dev-auth-bypass": "./src/dev-auth-bypass.ts",
     "./password": "./src/password.ts",
     "./session-token": "./src/session-token.ts"

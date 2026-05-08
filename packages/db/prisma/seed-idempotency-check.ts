@@ -30,6 +30,7 @@ type CountSnapshot = {
   users: number;
   sessions: number;
   activeSessions: number;
+  userPasswordTokens: number;
   auditLogs: number;
   carriers: number;
   salesAgencies: number;
@@ -244,6 +245,7 @@ async function readSnapshot(databaseUrl: string): Promise<SeedSnapshot> {
       usersCount,
       sessions,
       activeSessions,
+      userPasswordTokens,
       auditLogs,
       carriers,
       salesAgencies,
@@ -268,6 +270,7 @@ async function readSnapshot(databaseUrl: string): Promise<SeedSnapshot> {
       prisma.user.count(),
       prisma.session.count(),
       prisma.session.count({ where: { revokedAt: null } }),
+      prisma.userPasswordToken.count(),
       prisma.auditLog.count(),
       prisma.carrier.count(),
       prisma.salesAgency.count(),
@@ -304,6 +307,7 @@ async function readSnapshot(databaseUrl: string): Promise<SeedSnapshot> {
         users: usersCount,
         sessions,
         activeSessions,
+        userPasswordTokens,
         auditLogs,
         carriers,
         salesAgencies,
@@ -379,6 +383,7 @@ function assertSmokeSeedSnapshot(snapshot: SeedSnapshot, label: string) {
     users: 2,
     sessions: 0,
     activeSessions: 0,
+    userPasswordTokens: 0,
     auditLogs: 0,
     carriers: 0,
     salesAgencies: 0,

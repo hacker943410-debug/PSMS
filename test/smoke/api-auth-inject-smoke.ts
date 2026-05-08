@@ -1,9 +1,10 @@
-import { copyFile, mkdir, rm } from "node:fs/promises";
+import { copyFile, mkdir, rm, writeFile } from "node:fs/promises";
 import assert from "node:assert/strict";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { FastifyInstance } from "fastify";
 
+import { resetLoginRateLimitForTest } from "../../apps/api/src/auth/login-rate-limit";
 import { SESSION_COOKIE_NAME } from "../../packages/shared/src/session-token";
 
 interface ActionResult<T = unknown> {
@@ -27,6 +28,8 @@ interface SessionResponseData {
     status: "ACTIVE" | "INACTIVE";
   };
 }
+
+type PrismaClient = typeof import("../../packages/db/src/client").prisma;
 
 const currentFile = fileURLToPath(import.meta.url);
 const workspaceRoot = path.resolve(path.dirname(currentFile), "../..");
@@ -123,7 +126,7 @@ async function main() {
 
     await assertMalformedSessionCookie(app);
     await assertMalformedLogoutCookie(app);
-    await assertLoginRateLimit(app);
+    await assertLoginRateLimit(app, prisma);
 
     const adminToken = await login(app, accounts.admin);
     const staffToken = await login(app, accounts.staff);
@@ -168,7 +171,10 @@ async function login(
   return json.data.sessionToken;
 }
 
-async function assertLoginRateLimit(app: FastifyInstance) {
+async function assertLoginRateLimit(
+  app: FastifyInstance,
+  prisma: PrismaClient
+) {
   const limitedIp = "198.51.100.90";
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -273,6 +279,77 @@ async function assertLoginRateLimit(app: FastifyInstance) {
     failedAfterSuccessJson.message ?? "",
     /로그인 시도가 많습니다/
   );
+
+  await assertCorruptLoginRateLimitBlocksBeforeSession(app, prisma);
+}
+
+async function assertCorruptLoginRateLimitBlocksBeforeSession(
+  app: FastifyInstance,
+  prisma: PrismaClient
+) {
+  const corruptIp = "198.51.100.92";
+
+  resetLoginRateLimitForTest();
+
+  const sessionCountBefore = await prisma.session.count();
+  const failedAuditCountBefore = await prisma.auditLog.count({
+    where: { action: "AUTH_LOGIN_FAILED" },
+  });
+
+  try {
+    await writeFile(tempRateLimitPath, "{", "utf8");
+
+    const blocked = await app.inject({
+      method: "POST",
+      url: "/auth/login",
+      headers: {
+        "x-forwarded-for": corruptIp,
+      },
+      payload: {
+        loginId: accounts.admin.loginId,
+        password: accounts.admin.password,
+      },
+    });
+    const blockedJson = await readJson(blocked.payload);
+    const retryAfter = getHeaderValue(blocked.headers["retry-after"]);
+
+    assert.equal(blocked.statusCode, 429);
+    assert.equal(blockedJson.ok, false);
+    assert.equal(blockedJson.code, "RATE_LIMITED");
+    assert.match(blockedJson.message ?? "", /로그인 시도가 많습니다/);
+    assert.match(retryAfter ?? "", /^[1-9]\d*$/);
+    assert.ok(Number(retryAfter) <= 15 * 60);
+    assert.equal(getHeaderValue(blocked.headers["cache-control"]), "no-store");
+    assert.equal(getHeaderValue(blocked.headers["set-cookie"]), undefined);
+    assert.equal(blockedJson.data, undefined);
+    assert.equal(
+      (blockedJson as Record<string, unknown>).sessionToken,
+      undefined
+    );
+    assert.equal((blockedJson as Record<string, unknown>).expiresAt, undefined);
+    assert.equal(
+      (blockedJson as Record<string, unknown>).redirectTo,
+      undefined
+    );
+    assert.equal(
+      JSON.stringify(blockedJson).includes(accounts.admin.password),
+      false
+    );
+    assert.equal(
+      JSON.stringify(blockedJson).includes(accounts.admin.loginId),
+      false
+    );
+    assert.equal(JSON.stringify(blockedJson).includes(corruptIp), false);
+    assert.equal(await prisma.session.count(), sessionCountBefore);
+    assert.equal(
+      await prisma.auditLog.count({
+        where: { action: "AUTH_LOGIN_FAILED" },
+      }),
+      failedAuditCountBefore + 1
+    );
+  } finally {
+    resetLoginRateLimitForTest();
+  }
 }
 
 async function assertSession(

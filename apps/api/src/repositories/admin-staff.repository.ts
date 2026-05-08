@@ -81,6 +81,7 @@ export function findAdminStaffRows(db: DbClient, query: AdminStaffListQuery) {
       store: {
         select: {
           name: true,
+          status: true,
         },
       },
     },
@@ -107,6 +108,7 @@ export function findAdminStaffById(db: DbClient, userId: string) {
       store: {
         select: {
           name: true,
+          status: true,
         },
       },
     },

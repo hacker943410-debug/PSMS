@@ -10,6 +10,7 @@
  */
 export type * from './models/User'
 export type * from './models/Session'
+export type * from './models/UserPasswordToken'
 export type * from './models/Store'
 export type * from './models/Carrier'
 export type * from './models/SalesAgency'

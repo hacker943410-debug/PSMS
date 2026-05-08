@@ -42,6 +42,13 @@ async function main() {
         },
       },
     });
+    const tokenDeleteResult = await prisma.userPasswordToken.deleteMany({
+      where: {
+        userId: {
+          in: seedUsers.map((user) => user.id),
+        },
+      },
+    });
 
     console.log(
       JSON.stringify(
@@ -51,6 +58,7 @@ async function main() {
           seed,
           seedUsers,
           deletedSeedSessions: sessionDeleteResult.count,
+          deletedSeedPasswordTokens: tokenDeleteResult.count,
         },
         null,
         2

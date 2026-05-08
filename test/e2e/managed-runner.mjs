@@ -1,13 +1,24 @@
 import { spawn } from "node:child_process";
+import { createServer } from "node:http";
 import { rm } from "node:fs/promises";
 import net from "node:net";
 import path from "node:path";
+
+import { createCredentialLogRedactor } from "./support/credential-log-redaction.mjs";
 
 const WORKSPACE_ROOT = process.cwd();
 const E2E_DB_PATH = path.resolve(WORKSPACE_ROOT, ".tmp/e2e/psms-e2e.db");
 const E2E_RATE_LIMIT_PATH = path.resolve(
   WORKSPACE_ROOT,
   ".tmp/e2e/login-rate-limit.json"
+);
+const E2E_CREDENTIAL_RATE_LIMIT_PATH = path.resolve(
+  WORKSPACE_ROOT,
+  ".tmp/e2e/credential-token-rate-limit.json"
+);
+const E2E_ADMIN_CREDENTIAL_RATE_LIMIT_PATH = path.resolve(
+  WORKSPACE_ROOT,
+  ".tmp/e2e/admin-credential-rate-limit.json"
 );
 const E2E_DATABASE_URL = `file:${E2E_DB_PATH.replaceAll(path.sep, "/")}`;
 const HOST = "127.0.0.1";
@@ -16,6 +27,10 @@ const API_PORT = 4273;
 const WEB_URL = `http://${HOST}:${WEB_PORT}`;
 const API_URL = `http://${HOST}:${API_PORT}`;
 const E2E_AUTH_SECRET = "psms-e2e-managed-auth-secret-32-bytes";
+const E2E_PASSWORD_TOKEN_SECRET =
+  "psms-e2e-managed-password-token-secret-32-bytes";
+const E2E_CREDENTIAL_COMPLETION_SECRET =
+  "psms-e2e-managed-completion-secret-32-bytes";
 const E2E_PASSWORDS = {
   admin: "LocalAdmin123!",
   staff: "LocalStaff123!",
@@ -25,33 +40,119 @@ function pnpmCommand() {
   return process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 }
 
+function prefixLogText(text, name) {
+  if (!name || !text) {
+    return text;
+  }
+
+  return text.replace(/(^|\r?\n)(?=.)/g, `$1[${name}] `);
+}
+
+function pipeRedactedOutput(source, target, name) {
+  const redactor = createCredentialLogRedactor();
+  let flushed = false;
+
+  function write(text) {
+    if (text) {
+      target.write(prefixLogText(text, name));
+    }
+  }
+
+  function flush() {
+    if (flushed) {
+      return;
+    }
+
+    flushed = true;
+    write(redactor.flush());
+  }
+
+  source.on("data", (chunk) => write(redactor.write(chunk)));
+  source.once("end", flush);
+  source.once("close", flush);
+}
+
 function spawnCommand(command, args, env, options = {}) {
   const isWindows = process.platform === "win32";
+  const shouldPipeOutput = options.background || options.redactOutput;
   const child = spawn(
     isWindows ? (process.env.ComSpec ?? "cmd.exe") : command,
     isWindows ? ["/d", "/s", "/c", `${command} ${args.join(" ")}`] : args,
     {
       cwd: WORKSPACE_ROOT,
       env,
-      stdio: options.background ? "pipe" : "inherit",
+      stdio: shouldPipeOutput ? "pipe" : "inherit",
     }
   );
 
-  if (options.background) {
-    child.stdout?.on("data", (chunk) =>
-      process.stdout.write(`[${options.name}] ${chunk}`)
-    );
-    child.stderr?.on("data", (chunk) =>
-      process.stderr.write(`[${options.name}] ${chunk}`)
-    );
+  if (shouldPipeOutput) {
+    if (child.stdout) {
+      pipeRedactedOutput(child.stdout, process.stdout, options.name);
+    }
+
+    if (child.stderr) {
+      pipeRedactedOutput(child.stderr, process.stderr, options.name);
+    }
   }
 
   return child;
 }
 
-function runCommand(command, args, env) {
+function startCredentialDeliveryWebhook() {
+  const deliveries = [];
+  const server = createServer((request, response) => {
+    if (request.method === "GET" && request.url === "/deliveries") {
+      response
+        .writeHead(200, { "content-type": "application/json" })
+        .end(JSON.stringify({ deliveries }));
+      return;
+    }
+
+    if (request.method !== "POST" || request.url !== "/deliver") {
+      response.writeHead(404).end();
+      return;
+    }
+
+    let body = "";
+
+    request.on("data", (chunk) => {
+      body += chunk;
+    });
+    request.on("end", () => {
+      try {
+        deliveries.push(JSON.parse(body));
+      } catch {
+        deliveries.push({ malformed: true });
+      }
+
+      response.writeHead(204).end();
+    });
+  });
+
   return new Promise((resolve, reject) => {
-    const child = spawnCommand(command, args, env);
+    server.once("error", reject);
+    server.listen(0, HOST, () => {
+      const address = server.address();
+
+      if (!address || typeof address !== "object") {
+        reject(new Error("Credential delivery webhook did not bind."));
+        return;
+      }
+
+      resolve({
+        close: () =>
+          new Promise((closeResolve) => {
+            server.close(() => closeResolve());
+          }),
+        url: `http://${HOST}:${address.port}/deliver`,
+      });
+    });
+  });
+}
+
+function runCommand(command, args, env, options = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawnCommand(command, args, env, options);
 
     child.on("error", reject);
     child.on("exit", (code) => {
@@ -127,12 +228,14 @@ async function waitForHttp(url, label, timeoutMs = 60_000) {
   throw lastError ?? new Error(`${label} did not become ready.`);
 }
 
-function e2eEnv() {
+function e2eEnv(deliveryWebhookUrl) {
   return {
     ...process.env,
     APP_ENV: "e2e",
     DATABASE_URL: E2E_DATABASE_URL,
     AUTH_SECRET: E2E_AUTH_SECRET,
+    PASSWORD_TOKEN_SECRET: E2E_PASSWORD_TOKEN_SECRET,
+    CREDENTIAL_COMPLETION_SECRET: E2E_CREDENTIAL_COMPLETION_SECRET,
     API_HOST: HOST,
     API_PORT: String(API_PORT),
     WEB_HOST: HOST,
@@ -143,6 +246,18 @@ function e2eEnv() {
     PSMS_DEV_AUTH_BYPASS: "false",
     PSMS_LOGIN_RATE_LIMIT_STORE: "file",
     PSMS_LOGIN_RATE_LIMIT_FILE: E2E_RATE_LIMIT_PATH,
+    PSMS_CREDENTIAL_RATE_LIMIT_STORE: "file",
+    PSMS_CREDENTIAL_RATE_LIMIT_FILE: E2E_CREDENTIAL_RATE_LIMIT_PATH,
+    PSMS_ADMIN_CREDENTIAL_RATE_LIMIT_STORE: "file",
+    PSMS_ADMIN_CREDENTIAL_RATE_LIMIT_FILE: E2E_ADMIN_CREDENTIAL_RATE_LIMIT_PATH,
+    PSMS_CREDENTIAL_DELIVERY_MODE: "OUT_OF_BAND_APPROVED",
+    PSMS_CREDENTIAL_DELIVERY_WEBHOOK_URL: deliveryWebhookUrl,
+    PSMS_E2E_CREDENTIAL_DELIVERY_CAPTURE_URL: deliveryWebhookUrl.replace(
+      /\/deliver$/,
+      "/deliveries"
+    ),
+    PSMS_CREDENTIAL_DELIVERY_WEBHOOK_SECRET:
+      "psms-e2e-managed-delivery-secret-32-bytes",
     PSMS_E2E_DB_MODE: "isolated",
     PSMS_SKIP_E2E_SEED_RESET: "true",
     PSMS_SEED_ADMIN_LOGIN_ID: "admin1001",
@@ -203,12 +318,20 @@ async function main() {
     process.exit(1);
   }
 
-  const env = e2eEnv();
   const children = [];
+  let credentialDeliveryWebhook = null;
 
   try {
+    credentialDeliveryWebhook = await startCredentialDeliveryWebhook();
+    const env = e2eEnv(credentialDeliveryWebhook.url);
+
     await rm(E2E_RATE_LIMIT_PATH, { force: true });
-    await runCommand(pnpmCommand(), ["test:e2e:db:reset"], env);
+    await rm(E2E_CREDENTIAL_RATE_LIMIT_PATH, { force: true });
+    await rm(E2E_ADMIN_CREDENTIAL_RATE_LIMIT_PATH, { force: true });
+    await runCommand(pnpmCommand(), ["test:e2e:db:reset"], env, {
+      name: "db",
+      redactOutput: true,
+    });
 
     children.push(
       spawnCommand(pnpmCommand(), ["--filter", "@psms/api", "dev"], env, {
@@ -233,12 +356,19 @@ async function main() {
         "playwright",
         "test",
         "test/e2e/auth-browser.spec.ts",
+        "test/e2e/admin-staff-mutation-ui.spec.ts",
+        "test/e2e/credential-token-browser.spec.ts",
         "test/e2e/route-guards.spec.ts",
       ],
-      env
+      env,
+      {
+        name: "playwright",
+        redactOutput: true,
+      }
     );
   } finally {
     await Promise.all(children.map((child) => stopChild(child)));
+    await credentialDeliveryWebhook?.close();
   }
 }
 

@@ -40,3 +40,24 @@ export function updateUserLastLoginAt(
     select: { id: true },
   });
 }
+
+export function updateCredentialUserPassword(
+  db: DbClient,
+  input: {
+    userId: string;
+    expectedStatus: "ACTIVE" | "INACTIVE";
+    passwordHash: string;
+    nextStatus?: "ACTIVE" | "INACTIVE";
+  }
+) {
+  return db.user.updateMany({
+    where: {
+      id: input.userId,
+      status: input.expectedStatus,
+    },
+    data: {
+      passwordHash: input.passwordHash,
+      status: input.nextStatus,
+    },
+  });
+}

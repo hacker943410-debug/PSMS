@@ -4,6 +4,7 @@ import type {
   AdminPolicyType,
   AdminSubscriptionType,
 } from "./policies.validation";
+import type { CredentialDeliveryMode } from "../credential-token";
 
 export type AdminRecordStatus = "ACTIVE" | "INACTIVE";
 
@@ -21,10 +22,26 @@ export type AdminStaffListRow = {
   updatedAt: string;
 };
 
+export type AdminStaffCredentialRequestStatus = "NONE" | "PENDING";
+
+export type AdminStaffCredentialRequestSummary = {
+  status: AdminStaffCredentialRequestStatus;
+  issuedAt: string | null;
+  expiresAt: string | null;
+  deliveryMode: CredentialDeliveryMode | null;
+  issuedByName: string | null;
+  canRevoke: boolean;
+};
+
 export type AdminStaffDetail = AdminStaffListRow & {
   auditSummary: {
     lastStatusChangedAt: string | null;
     lastStatusChangedBy: string | null;
+  };
+  credentialRequests: {
+    asOf: string;
+    activation: AdminStaffCredentialRequestSummary;
+    passwordReset: AdminStaffCredentialRequestSummary;
   };
 };
 

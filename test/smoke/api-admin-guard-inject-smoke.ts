@@ -30,6 +30,7 @@ const tempRunDir = path.resolve(
   String(process.pid)
 );
 const tempDbPath = path.resolve(tempRunDir, "dev.db");
+const tempRateLimitPath = path.resolve(tempRunDir, "login-rate-limit.json");
 
 const accounts = {
   admin: {
@@ -124,6 +125,7 @@ async function main() {
   process.env.NODE_ENV = "test";
   process.env.API_PORT = "4273";
   process.env.DATABASE_URL = toSqliteFileUrl(tempDbPath);
+  process.env.PSMS_LOGIN_RATE_LIMIT_FILE = tempRateLimitPath;
 
   const currentAuthSecret = process.env.AUTH_SECRET?.trim();
 

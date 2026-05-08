@@ -26,6 +26,7 @@ import {
   type AdminStaffStatusSnapshot,
 } from "../../repositories/admin-staff.repository";
 import { revokeActiveSessionsForUser } from "../../repositories/session.repository";
+import { revokeAllActiveUserPasswordTokensForUser } from "../../repositories/user-password-token.repository";
 import type { AuthRequestMetadata } from "../auth.service";
 
 type AdminStaffMutationResult = {
@@ -324,6 +325,13 @@ export async function updateAdminStaff(
     const revokedSessions = shouldRevokeSessions
       ? await revokeActiveSessionsForUser(tx, target.id, now)
       : { count: 0 };
+    const revokedCredentialTokens = shouldRevokeSessions
+      ? await revokeAllActiveUserPasswordTokensForUser(tx, {
+          userId: target.id,
+          revokedAt: now,
+          revokedById: actorSession.userId,
+        })
+      : { count: 0 };
     const updated = await findAdminStaffStatusSnapshot(tx, target.id);
 
     if (!updated) {
@@ -343,6 +351,7 @@ export async function updateAdminStaff(
         ...toAuditStaffSnapshot(updated),
         changedFields,
         revokedSessionCount: revokedSessions.count,
+        revokedCredentialTokenCount: revokedCredentialTokens.count,
       },
       reason: "ADMIN_STAFF_UPDATED",
       ipAddress: metadata.ipAddress,
@@ -539,6 +548,14 @@ export async function changeAdminStaffStatus(
       input.status === "INACTIVE"
         ? await revokeActiveSessionsForUser(tx, target.id, now)
         : { count: 0 };
+    const revokedCredentialTokens =
+      input.status === "INACTIVE"
+        ? await revokeAllActiveUserPasswordTokensForUser(tx, {
+            userId: target.id,
+            revokedAt: now,
+            revokedById: actorSession.userId,
+          })
+        : { count: 0 };
     const updated = await findAdminStaffStatusSnapshot(tx, target.id);
 
     if (!updated) {
@@ -560,6 +577,7 @@ export async function changeAdminStaffStatus(
         newStatus: updated.status,
         reason: input.reason,
         revokedSessionCount: revokedSessions.count,
+        revokedCredentialTokenCount: revokedCredentialTokens.count,
       },
       reason: input.reason,
       ipAddress: metadata.ipAddress,

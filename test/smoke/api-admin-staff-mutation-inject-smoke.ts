@@ -69,6 +69,7 @@ type PrismaClient = typeof import("../../packages/db/src/client").prisma;
 
 type FixtureContext = {
   adminUserId: string;
+  adminCredentialTargetId: string;
   staffUserId: string;
   targetStaffId: string;
   targetStaffLoginId: string;
@@ -87,6 +88,7 @@ const tempRunDir = path.resolve(
   String(process.pid)
 );
 const tempDbPath = path.resolve(tempRunDir, "dev.db");
+const tempRateLimitPath = path.resolve(tempRunDir, "login-rate-limit.json");
 
 const accounts = {
   admin: {
@@ -172,12 +174,27 @@ async function main() {
   process.env.NODE_ENV = "test";
   process.env.API_PORT = "4273";
   process.env.DATABASE_URL = toSqliteFileUrl(tempDbPath);
+  process.env.PSMS_LOGIN_RATE_LIMIT_FILE = tempRateLimitPath;
 
   const currentAuthSecret = process.env.AUTH_SECRET?.trim();
 
   if (!currentAuthSecret || currentAuthSecret.startsWith("replace-with")) {
     process.env.AUTH_SECRET = "local-api-admin-staff-mutation-secret-psms";
   }
+
+  const currentPasswordTokenSecret = process.env.PASSWORD_TOKEN_SECRET?.trim();
+
+  if (
+    !currentPasswordTokenSecret ||
+    currentPasswordTokenSecret.startsWith("replace-with")
+  ) {
+    process.env.PASSWORD_TOKEN_SECRET =
+      "local-api-admin-staff-mutation-token-secret-32-bytes";
+  }
+
+  process.env.PSMS_CREDENTIAL_DELIVERY_MODE = "OUT_OF_BAND_APPROVED";
+  process.env.PSMS_CREDENTIAL_DELIVERY_WEBHOOK_URL ??=
+    "http://127.0.0.1:9/admin-staff-mutation-capture";
 
   const { createApiApp } = await import("../../apps/api/src/app");
   const { prisma } = await import("../../packages/db/src/client");
@@ -222,6 +239,7 @@ async function main() {
     await assertSelfDisableForbidden(app, adminToken, fixtures);
     await assertSameStatusForbidden(app, adminToken, fixtures);
     await assertStaleRecord(app, adminToken, fixtures);
+    await assertAdminCredentialTargetForbidden(app, adminToken, fixtures);
     await assertSuccessRevokesTargetSession(
       app,
       adminToken,
@@ -298,9 +316,21 @@ async function seedFixtures(prisma: PrismaClient): Promise<FixtureContext> {
     },
     select: { id: true },
   });
+  const adminCredentialTarget = await prisma.user.create({
+    data: {
+      name: "Mutation Admin Credential Target",
+      email: nextLoginId("mutadmcred"),
+      passwordHash: await hashPassword(targetStaffPassword),
+      role: "ADMIN",
+      status: "ACTIVE",
+      storeId: null,
+    },
+    select: { id: true },
+  });
 
   return {
     adminUserId: adminUser.id,
+    adminCredentialTargetId: adminCredentialTarget.id,
     staffUserId: staffUser.id,
     targetStaffId: targetStaff.id,
     targetStaffLoginId,
@@ -409,6 +439,32 @@ async function postCreateStaff(
   return app.inject({
     method: "POST",
     url: "/admin/staffs/create",
+    headers: sessionToken ? { cookie: sessionCookie(sessionToken) } : undefined,
+    payload,
+  });
+}
+
+async function postPasswordResetIssue(
+  app: FastifyInstance,
+  sessionToken: string | null,
+  payload: unknown
+) {
+  return app.inject({
+    method: "POST",
+    url: "/admin/staffs/password-reset/issue",
+    headers: sessionToken ? { cookie: sessionCookie(sessionToken) } : undefined,
+    payload,
+  });
+}
+
+async function postPasswordResetRevoke(
+  app: FastifyInstance,
+  sessionToken: string | null,
+  payload: unknown
+) {
+  return app.inject({
+    method: "POST",
+    url: "/admin/staffs/password-reset/revoke",
     headers: sessionToken ? { cookie: sessionCookie(sessionToken) } : undefined,
     payload,
   });
@@ -1273,6 +1329,34 @@ async function assertStaleRecord(
   assert.equal(json.ok, false);
   assert.equal(json.code, "STALE_RECORD");
   assert.equal(hasSecretField(json), false);
+}
+
+async function assertAdminCredentialTargetForbidden(
+  app: FastifyInstance,
+  adminToken: string,
+  fixtures: FixtureContext
+) {
+  const issueResponse = await postPasswordResetIssue(app, adminToken, {
+    userId: fixtures.adminCredentialTargetId,
+    reason: "admin credential target issue smoke",
+  });
+  const issueJson = await readJson(issueResponse.payload);
+
+  assert.equal(issueResponse.statusCode, 409);
+  assert.equal(issueJson.ok, false);
+  assert.equal(issueJson.code, "INVALID_ACCOUNT_STATE");
+  assert.equal(hasSecretField(issueJson), false);
+
+  const revokeResponse = await postPasswordResetRevoke(app, adminToken, {
+    userId: fixtures.adminCredentialTargetId,
+    reason: "admin credential target revoke smoke",
+  });
+  const revokeJson = await readJson(revokeResponse.payload);
+
+  assert.equal(revokeResponse.statusCode, 409);
+  assert.equal(revokeJson.ok, false);
+  assert.equal(revokeJson.code, "INVALID_ACCOUNT_STATE");
+  assert.equal(hasSecretField(revokeJson), false);
 }
 
 async function assertSuccessRevokesTargetSession(

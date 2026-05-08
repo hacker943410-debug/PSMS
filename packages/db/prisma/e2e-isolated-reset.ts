@@ -161,17 +161,26 @@ async function verifyDatabase(databaseUrl: string) {
         'InventoryItem_serialNumber_key',
         'Sale_inventoryItemId_key',
         'Receivable_saleId_key',
-        'Session_sessionTokenHash_key'
+        'Session_sessionTokenHash_key',
+        'UserPasswordToken_tokenHash_key',
+        'UserPasswordToken_activeKey_key'
       )`
     );
-    const [stores, users, sessions, activeSessions, auditLogs] =
-      await Promise.all([
-        prisma.store.count(),
-        prisma.user.count(),
-        prisma.session.count(),
-        prisma.session.count({ where: { revokedAt: null } }),
-        prisma.auditLog.count(),
-      ]);
+    const [
+      stores,
+      users,
+      sessions,
+      activeSessions,
+      userPasswordTokens,
+      auditLogs,
+    ] = await Promise.all([
+      prisma.store.count(),
+      prisma.user.count(),
+      prisma.session.count(),
+      prisma.session.count({ where: { revokedAt: null } }),
+      prisma.userPasswordToken.count(),
+      prisma.auditLog.count(),
+    ]);
 
     if (quickCheck?.quick_check !== "ok") {
       throw new Error("E2E isolated DB quick_check failed.");
@@ -181,14 +190,20 @@ async function verifyDatabase(databaseUrl: string) {
       throw new Error("E2E isolated DB foreign_key_check failed.");
     }
 
-    if (stores !== 1 || users !== 2 || sessions !== 0 || activeSessions !== 0) {
+    if (
+      stores !== 1 ||
+      users !== 2 ||
+      sessions !== 0 ||
+      activeSessions !== 0 ||
+      userPasswordTokens !== 0
+    ) {
       throw new Error("E2E isolated DB seed counts are not deterministic.");
     }
 
     if (
-      Number(businessTableRows[0]?.count ?? 0) !== 22 ||
-      Number(indexRows[0]?.count ?? 0) !== 55 ||
-      requiredUniqueIndexRows.length !== 4
+      Number(businessTableRows[0]?.count ?? 0) !== 23 ||
+      Number(indexRows[0]?.count ?? 0) !== 62 ||
+      requiredUniqueIndexRows.length !== 6
     ) {
       throw new Error("E2E isolated DB catalog verification failed.");
     }
@@ -206,6 +221,7 @@ async function verifyDatabase(databaseUrl: string) {
       users,
       sessions,
       activeSessions,
+      userPasswordTokens,
       auditLogs,
     };
   } finally {

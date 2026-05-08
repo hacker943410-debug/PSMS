@@ -53,6 +53,8 @@ export type {
   AdminPolicySubscriptionType,
   AdminRecordStatus,
   AdminStaffChangeStatusResult,
+  AdminStaffCredentialRequestStatus,
+  AdminStaffCredentialRequestSummary,
   AdminStaffCreateResult,
   AdminStaffDetail,
   AdminStaffListRow,
