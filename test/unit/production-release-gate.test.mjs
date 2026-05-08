@@ -52,6 +52,11 @@ describe("production release gate", () => {
     );
     assert.equal(report.failed.length, 0);
     assert.ok(report.manualChecks.length >= 3);
+    assert.ok(
+      report.manualChecks.some((check) =>
+        check.includes("compensation failure cleanup runbook")
+      )
+    );
   });
 
   it("rejects missing, placeholder, short, and reused secrets", () => {

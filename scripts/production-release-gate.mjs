@@ -443,6 +443,7 @@ export function validateProductionReleaseGate(env) {
     "Confirm reverse proxy/CDN/APM do not capture query strings, request bodies, Cookie, Set-Cookie, or Authorization headers for credential routes.",
     "Confirm credential delivery webhook receiver does not persist request body, raw token, or Authorization header.",
     "Confirm credential delivery webhook receiver deduplicates by X-PSMS-Delivery-Id before any production retry rollout.",
+    "Confirm credential compensation failure cleanup runbook limbo token scan is recorded in the release report.",
     "Confirm release report includes rollback, backup, DB path, and executed validation commands.",
   ];
 

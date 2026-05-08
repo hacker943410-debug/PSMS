@@ -66,6 +66,7 @@ pnpm release:gate
 | Reverse proxy/CDN/APM | credential route query string, request body, Cookie, Set-Cookie, Authorization header 저장 금지 또는 scrubber 적용 |
 | Webhook receiver      | request body, raw token, Authorization header 저장 금지. retry/dedupe를 켜기 전 receiver idempotency contract 확인 |
 | Rollback              | secret rotation, credential token invalidation, 로그/아티팩트 quarantine 절차                                      |
+| Compensation cleanup  | `docs/60_release/credential-compensation-failure-cleanup-runbook.md` 기준 limbo token scan과 cleanup evidence 기록 |
 | Evidence              | 실행 명령, 결과 JSON, DB 경로, 백업 경로, smoke 결과                                                               |
 
 수동 확인이 비어 있으면 `pnpm release:gate`가 통과해도 최종 릴리즈는 PASS로 판정하지 않는다.
@@ -104,6 +105,8 @@ release report는 최소 아래 표를 채운다.
 | CDN/APM scrub        |       |                   |        |      |       |
 | Webhook receiver log |       |                   |        |      |       |
 | Receiver idempotency |       |                   |        |      |       |
+| Limbo token scan     |       |                   |        |      |       |
+| Compensation cleanup |       |                   |        |      |       |
 | DB path/backup path  |       |                   |        |      |       |
 | Smoke results        |       |                   |        |      |       |
 | Rollback rehearsal   |       |                   |        |      |       |
