@@ -124,12 +124,13 @@ For architecture, auth, DB, API, and domain work, also check:
 - Use a dedicated page and stepper for complex sales entry.
 - Do not use browser-native `alert` or `confirm`.
 - Status must include text, not color alone.
-- Spark may create UI skeletons, presentational components, static tables, Tailwind layout, and documentation formatting only.
+- Use Spark first for frontend implementation in `apps/web` unless the work touches auth/session/RBAC, DB/Prisma, shared API contracts, Web auth adapters, security-sensitive flows, or backend business logic.
+- If Spark quota is exhausted or Spark is unavailable, continue with the existing frontend subagent routing such as `frontend_agent`, `ui_runtime_validator`, and `visual_ui_reviewer`.
 
 ## Model Use Rules
 
 - GPT-5.5: architecture, auth, DB, API contract, transactions, policy, security, final review.
-- Spark: UI skeleton, presentational components, Tailwind layout, static tables, simple docs, mechanical repetitive edits.
+- Spark: default first-choice for non-auth, non-DB frontend work in `apps/web`, including page composition, Client Components, Drawer/Modal/Form UI, URL-state UI wiring, Tailwind layout, static/seed-backed views, and visual/design iteration.
 - mini: codebase mapping, docs cleanup, report drafting, simple helper/test scaffolding.
 
 Spark is forbidden for auth, DB, Prisma migration, API contract, transactions, RBAC, receivable balance, policy activation, payment logic, export permission, and Audit Log.

@@ -43,7 +43,18 @@
 
 ## Spark 제한
 
-Spark는 UI/단순 작업에만 사용한다.
+Spark는 DB/인증/API contract 비관련 `apps/web` 프론트엔드 작업의 우선 경로다. Spark 한도가
+소진되었거나 Spark가 사용할 수 없는 경우에는 기존 `frontend_agent` 중심 라우팅으로 전환한다.
+
+Spark가 우선 담당할 수 있는 예시는 다음과 같다.
+
+- `apps/web` route/page composition
+- Client Component interaction
+- Drawer, Modal, Form, FilterBar, DataTable 구현
+- URL Search Params 기반 UI state wiring
+- 이미 승인된 API/read adapter를 호출하는 frontend-only 화면 연결
+- Tailwind layout, responsive state, loading/empty/error state
+- frontend-only unit/component test scaffold
 
 Spark가 다음 파일 또는 영역을 수정해야 하는 상황이면 즉시 중단한다.
 
@@ -53,6 +64,7 @@ Spark가 다음 파일 또는 영역을 수정해야 하는 상황이면 즉시 
 - `apps/web/src/server/actions/auth.actions.ts`
 - `apps/web/src/lib/auth`
 - `apps/web/src/lib/api-client.ts`의 API contract 변경
+- Web Server Action 또는 API adapter contract 신설/변경
 - `apps/desktop`
 - auth/session/RBAC
 - Fastify API contract

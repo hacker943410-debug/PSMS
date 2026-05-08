@@ -42,14 +42,25 @@
 
 ## Spark 사용 범위
 
-Spark 사용 가능:
+Spark는 DB/인증/API contract 비관련 `apps/web` 프론트엔드 작업에 우선 사용한다. Spark 한도가
+소진되었거나 Spark가 사용할 수 없는 경우에는 기존 하네스 라우팅대로 `frontend_agent` 등으로
+전환한다.
 
+Spark 우선 사용 가능:
+
+- `apps/web` route/page composition
+- Client Component interaction
+- Drawer, Modal, Form, FilterBar, DataTable
+- URL Search Params 기반 UI state wiring
+- 이미 승인된 API/read adapter를 호출하는 frontend-only 화면 연결
 - `apps/web` 화면 skeleton
 - Tailwind 스타일링
 - 공통 presentational 컴포넌트
 - 정적 컬럼 정의
 - Story/demo/dummy data
 - 디자인 reference 기반 spacing/color 1차 보정
+- loading/empty/error state
+- frontend-only unit/component test scaffold
 - 문서 포맷 정리
 
 Spark 사용 금지:
@@ -60,6 +71,7 @@ Spark 사용 금지:
 - `apps/web/src/server/actions/auth.actions.ts`
 - `apps/web/src/lib/auth`
 - `apps/web/src/lib/api-client.ts`의 API contract 변경
+- Web Server Action 또는 API adapter contract 신설/변경
 - `apps/desktop`
 - auth/session/RBAC
 - Fastify API contract
