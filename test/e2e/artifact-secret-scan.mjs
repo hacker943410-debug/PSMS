@@ -4,7 +4,13 @@ import path from "node:path";
 import { redactCredentialSecretsFromLog } from "./support/credential-log-redaction.mjs";
 
 const WORKSPACE_ROOT = process.cwd();
-const SCAN_ROOTS = [".codex-logs", ".tmp", "test-results", "playwright-report"];
+const SCAN_ROOTS = [
+  ".codex-logs",
+  ".tmp",
+  "test-results",
+  "playwright-report",
+  "release-evidence",
+];
 const ROOT_LOG_PATTERN = /^\.psms-dev.*\.log$/;
 const MAX_SCAN_BYTES = 20 * 1024 * 1024;
 const BINARY_EXTENSIONS = new Set([
@@ -47,7 +53,7 @@ const SECRET_PATTERNS = [
   {
     name: "json sensitive field",
     pattern:
-      /"(?:activeKey|authorization|confirmPassword|newPassword|password|passwordHash|rawToken|tokenHash|webhookSecret)"\s*:\s*"[^"\[]{8,256}"/gi,
+      /"(?:activeKey|authorization|confirmPassword|newPassword|password|passwordHash|rawToken|sessionHash|sessionToken|tokenHash|webhookBody|webhookSecret)"\s*:\s*"[^"\[]{8,256}"/gi,
   },
   {
     name: "form sensitive field",
@@ -58,6 +64,19 @@ const SECRET_PATTERNS = [
   {
     name: "authorization bearer",
     pattern: /\bauthorization:\s*Bearer\s+(?!\[REDACTED\])[^\s]{8,256}/gi,
+  },
+  {
+    name: "cookie header",
+    pattern: /\b(?:cookie|set-cookie):\s*(?!\[REDACTED\])[^\r\n]{8,512}/gi,
+  },
+  {
+    name: "postgresql dsn",
+    pattern: /\bpostgres(?:ql)?:\/\/[^\s"']{8,512}/gi,
+  },
+  {
+    name: "credential url",
+    pattern:
+      /https?:\/\/[^\s"']*(?:[?&]token=|staff-activation|password-reset)[^\s"']*/gi,
   },
 ];
 
@@ -164,12 +183,26 @@ async function scanFile(filePath) {
     for (const match of text.matchAll(pattern)) {
       matches.push({
         pattern: name,
-        excerpt: redactCredentialSecretsFromLog(match[0]).slice(0, 120),
+        excerpt: redactArtifactSecretExcerpt(match[0]).slice(0, 120),
       });
     }
   }
 
   return { matches };
+}
+
+function redactArtifactSecretExcerpt(value) {
+  return redactCredentialSecretsFromLog(value)
+    .replace(/\bpostgres(?:ql)?:\/\/[^\s"']+/gi, "postgresql://[REDACTED]")
+    .replace(/\b(cookie|set-cookie):\s*[^\r\n]+/gi, "$1: [REDACTED]")
+    .replace(
+      /\bauthorization:\s*Bearer\s+[^\s]+/gi,
+      "authorization: Bearer [REDACTED]"
+    )
+    .replace(
+      /https?:\/\/[^\s"']*(?:[?&]token=|staff-activation|password-reset)[^\s"']*/gi,
+      "https://[REDACTED]"
+    );
 }
 
 const targets = await collectScanTargets();

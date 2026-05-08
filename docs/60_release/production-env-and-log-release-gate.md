@@ -21,12 +21,19 @@
 ```powershell
 pnpm release:gate:prod-env
 pnpm release:gate:logs
+pnpm release:evidence:validate
 pnpm release:gate
 ```
 
 `release:gate:prod-env`는 `scripts/production-release-gate.mjs`를 실행한다.
 
 `release:gate:logs`는 `test/e2e/artifact-secret-scan.mjs`를 실행한다.
+
+`release:evidence:validate`는 `release-evidence` JSON artifact의 schema/path/result/redaction
+evidence를 검사한다. evidence root가 비어 있으면 fail-closed로 `BLOCK`이다.
+
+release evidence artifact naming, JSON shape, forbidden field list, reviewer checklist는
+`docs/60_release/credential-cleanup-release-evidence-template.md`를 따른다.
 
 ## Env Gate
 
@@ -67,6 +74,10 @@ pnpm release:gate
 | Webhook receiver      | request body, raw token, Authorization header 저장 금지. retry/dedupe를 켜기 전 receiver idempotency contract 확인 |
 | Rollback              | secret rotation, credential token invalidation, 로그/아티팩트 quarantine 절차                                      |
 | Compensation cleanup  | `docs/60_release/credential-compensation-failure-cleanup-runbook.md` 기준 limbo token scan과 cleanup evidence 기록 |
+| Evidence template     | `docs/60_release/credential-cleanup-release-evidence-template.md` 기준 artifact naming/JSON/redaction 기록         |
+| PostgreSQL cleanup    | PostgreSQL 운영 DB 후보는 `docs/60_release/postgresql-credential-cleanup-rehearsal-profile.md` PASS evidence 기록  |
+| PostgreSQL scaffold   | `pnpm pg:profile:preflight` output 기록. `readiness: BLOCK`은 PostgreSQL execution PASS가 아님                     |
+| PostgreSQL readiness  | PostgreSQL 운영 DB 후보는 `pnpm pg:profile:require-readiness` PASS evidence 기록. SQLite-only는 N/A 가능           |
 | Evidence              | 실행 명령, 결과 JSON, DB 경로, 백업 경로, smoke 결과                                                               |
 
 수동 확인이 비어 있으면 `pnpm release:gate`가 통과해도 최종 릴리즈는 PASS로 판정하지 않는다.
@@ -97,19 +108,26 @@ rollback 담당자를 기록한다. 이 증거가 없으면 retry rollout은 BLO
 
 release report는 최소 아래 표를 채운다.
 
-| Gate                 | Owner | Evidence artifact | Result | Time | Notes |
-| -------------------- | ----- | ----------------- | ------ | ---- | ----- |
-| Env gate JSON        |       |                   |        |      |       |
-| Artifact secret scan |       |                   |        |      |       |
-| Reverse proxy scrub  |       |                   |        |      |       |
-| CDN/APM scrub        |       |                   |        |      |       |
-| Webhook receiver log |       |                   |        |      |       |
-| Receiver idempotency |       |                   |        |      |       |
-| Limbo token scan     |       |                   |        |      |       |
-| Compensation cleanup |       |                   |        |      |       |
-| DB path/backup path  |       |                   |        |      |       |
-| Smoke results        |       |                   |        |      |       |
-| Rollback rehearsal   |       |                   |        |      |       |
+| Gate                 | Scope                        | Owner | Command(s)                          | Exit code | Evidence artifact | Artifact SHA256 | Result | Time UTC | Reviewer | Notes |
+| -------------------- | ---------------------------- | ----- | ----------------------------------- | --------- | ----------------- | --------------- | ------ | -------- | -------- | ----- |
+| Env gate JSON        | release candidate            |       | `pnpm release:gate:prod-env`        |           |                   |                 |        |          |          |       |
+| Artifact secret scan | release artifacts            |       | `pnpm release:gate:logs`            |           |                   |                 |        |          |          |       |
+| Reverse proxy scrub  | external systems             |       | owner attestation                   |           |                   |                 |        |          |          |       |
+| CDN/APM scrub        | external systems             |       | owner attestation                   |           |                   |                 |        |          |          |       |
+| Webhook receiver log | external receiver            |       | owner attestation                   |           |                   |                 |        |          |          |       |
+| Receiver idempotency | external receiver            |       | owner attestation                   |           |                   |                 |        |          |          |       |
+| Limbo token scan     | credential cleanup           |       | detection SQL or dry-run            |           |                   |                 |        |          |          |       |
+| Compensation cleanup | credential cleanup           |       | cleanup dry-run/confirm             |           |                   |                 |        |          |          |       |
+| PostgreSQL cleanup   | PostgreSQL release candidate |       | rehearsal profile                   |           |                   |                 |        |          |          |       |
+| PostgreSQL scaffold  | PG static scaffold           |       | `pnpm pg:profile:preflight`         |           |                   |                 |        |          |          |       |
+| PostgreSQL readiness | PostgreSQL release candidate |       | `pnpm pg:profile:require-readiness` |           |                   |                 |        |          |          |       |
+| DB path/backup path  | release candidate            |       | backup verification                 |           |                   |                 |        |          |          |       |
+| Smoke results        | release candidate            |       | smoke commands                      |           |                   |                 |        |          |          |       |
+| Rollback rehearsal   | release rollback             |       | rollback note                       |           |                   |                 |        |          |          |       |
+
+`pnpm release:gate`의 automated `ok: true`는 자동 env/log gate 통과만 뜻한다. 최종 release
+PASS는 모든 manual evidence row가 `PASS` 또는 허용된 `N/A-SQLite-only` /
+`N/A-NoRows`로 reviewer 확인을 받은 뒤에만 사용할 수 있다.
 
 ## Incident / Rollback
 

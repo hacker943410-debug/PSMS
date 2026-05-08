@@ -46,15 +46,32 @@ describe("production release gate", () => {
     assert.equal(report.ok, true);
     assert.equal(report.stage, "prod-env");
     assert.equal(report.failures.length, 0);
-    assert.equal(
-      report.checked.logArtifacts,
-      "pnpm test:e2e:artifact-secret-scan"
-    );
+    assert.equal(report.checked.logArtifacts, "pnpm release:gate:logs");
     assert.equal(report.failed.length, 0);
     assert.ok(report.manualChecks.length >= 3);
     assert.ok(
       report.manualChecks.some((check) =>
+        check.includes("credential-cleanup-release-evidence-template.md")
+      )
+    );
+    assert.ok(
+      report.manualChecks.some((check) =>
         check.includes("compensation failure cleanup runbook")
+      )
+    );
+    assert.ok(
+      report.manualChecks.some((check) =>
+        check.includes("pnpm pg:profile:preflight")
+      )
+    );
+    assert.ok(
+      report.manualChecks.some((check) =>
+        check.includes("pnpm pg:profile:require-readiness")
+      )
+    );
+    assert.ok(
+      report.manualChecks.some((check) =>
+        check.includes("PostgreSQL credential cleanup rehearsal profile")
       )
     );
   });

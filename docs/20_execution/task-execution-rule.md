@@ -11,7 +11,9 @@
 5. 구현 전 변경 범위와 검증 계획을 정한다.
 6. 구현한다.
 7. 포맷, 타입, lint, build, DB, 테스트, UI 검증 중 관련 검증을 실행한다.
-8. 변경 파일, 검증 결과, 남은 위험, 다음 작업을 보고한다.
+8. 완료된 background subagent를 닫고, 잔여 활성 subagent가 없는지 확인한다.
+9. `git status --short`를 확인하고, 완료 작업의 dirty/untracked 파일을 커밋하거나 의도적 잔여로 분류한다.
+10. 변경 파일, 검증 결과, subagent cleanup 상태, worktree 상태, 남은 위험, 다음 작업을 보고한다.
 
 ## 작업 분해 기준
 
@@ -89,5 +91,7 @@ Spark 사용 금지:
 - Electron 변경은 release checklist와 smoke 계획이 있다.
 - 변경 후 실행한 검증 명령 또는 검증하지 못한 이유를 보고한다.
 - auth/DB/API contract 변경 여부를 명시한다.
+- 완료 후 더 이상 필요 없는 background subagent를 닫고, 잔여 활성 subagent 상태를 명시한다.
+- 최종 `git status --short`를 확인하고, dirty/untracked 파일이 남으면 커밋 대상인지 의도적 잔여인지 명시한다.
 
 검증 결과가 없으면 완료로 보고하지 않는다.

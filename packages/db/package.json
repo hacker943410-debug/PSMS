@@ -11,6 +11,7 @@
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "db:validate": "prisma validate --config prisma.config.ts",
+    "db:validate:pg-schema": "prisma validate --schema prisma/schema.postgresql.prisma",
     "db:generate": "prisma generate --config prisma.config.ts",
     "db:migrate:create": "prisma migrate dev --create-only --config prisma.config.ts",
     "db:migrate": "prisma migrate dev --config prisma.config.ts",

@@ -141,3 +141,5 @@ Spark is forbidden for auth, DB, Prisma migration, API contract, transactions, R
 - When docs and implementation conflict, report the conflict and follow the safer interpretation.
 - Unclear rules involving permissions, money, inventory, payment, receivables, or policy must not be relaxed.
 - Every completion report must include changed files, validation, risks, and next steps.
+- At task completion, close every background subagent that is no longer needed, verify that no stale subagent remains active, and include the cleanup status in the completion report.
+- Before a final completion response, run `git status --short`; if completed work leaves dirty or untracked files, either cleanly stage/commit the agreed work or explicitly report the intentional remaining dirty paths and why they must remain.

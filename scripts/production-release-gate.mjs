@@ -443,7 +443,11 @@ export function validateProductionReleaseGate(env) {
     "Confirm reverse proxy/CDN/APM do not capture query strings, request bodies, Cookie, Set-Cookie, or Authorization headers for credential routes.",
     "Confirm credential delivery webhook receiver does not persist request body, raw token, or Authorization header.",
     "Confirm credential delivery webhook receiver deduplicates by X-PSMS-Delivery-Id before any production retry rollout.",
+    "Confirm cleanup/release evidence artifacts follow docs/60_release/credential-cleanup-release-evidence-template.md naming, JSON shape, and forbidden field checklist.",
     "Confirm credential compensation failure cleanup runbook limbo token scan is recorded in the release report.",
+    "Run pnpm pg:profile:preflight and record scaffold integrity output; readiness: BLOCK is not PostgreSQL execution PASS.",
+    "For a PostgreSQL release candidate, run pnpm pg:profile:require-readiness and require PASS; local Electron SQLite-only releases may record N/A-SQLite-only.",
+    "Confirm PostgreSQL credential cleanup rehearsal profile is PASS for PostgreSQL releases or explicitly N/A-SQLite-only for local Electron release.",
     "Confirm release report includes rollback, backup, DB path, and executed validation commands.",
   ];
 
@@ -469,7 +473,7 @@ export function validateProductionReleaseGate(env) {
         "PSMS_CREDENTIAL_DELIVERY_WEBHOOK_TIMEOUT_MS",
         "PSMS_CREDENTIAL_DELIVERY_WEBHOOK_MAX_ATTEMPTS",
       ],
-      logArtifacts: "pnpm test:e2e:artifact-secret-scan",
+      logArtifacts: "pnpm release:gate:logs",
       manualChecks: manualChecks.length,
     },
     checks,

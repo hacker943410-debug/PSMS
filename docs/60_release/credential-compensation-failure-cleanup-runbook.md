@@ -124,7 +124,27 @@ WHERE u.id IS NULL;
 
 ## Cleanup 절차
 
-단일 limbo token 수동 revoke SQL 예시:
+우선 앱 내부 audited cleanup command를 dry-run으로 실행한다.
+
+```powershell
+pnpm ops:credential-compensation-cleanup
+```
+
+confirmed cleanup은 dry-run 결과의 token id와 expected count, active ADMIN actor,
+operator, ticket id를 명시해야 한다.
+
+```powershell
+pnpm ops:credential-compensation-cleanup --confirm --token-id <limbo-token-id> --expected-count 1 --actor-user-id <admin-user-id> --operator <operator-name> --ticket-id <ticket-id>
+```
+
+SQLite command output에는 resolved DB path가 포함된다. PostgreSQL profile에서는 full DSN이
+아니라 redacted DB identifier만 evidence에 남긴다. 운영자는 dry-run/confirm 전에 해당 DB
+identifier가 백업 대상 DB와 일치하는지 확인한다.
+
+직접 SQL cleanup은 command를 사용할 수 없는 incident 상황에서만 사용한다. 이 경우에도
+createdAt cutoff guard를 포함해야 한다.
+
+SQLite emergency SQL:
 
 ```sql
 UPDATE UserPasswordToken
@@ -135,7 +155,23 @@ SET
 WHERE id = '<limbo-token-id>'
   AND activeKey IS NULL
   AND usedAt IS NULL
-  AND revokedAt IS NULL;
+  AND revokedAt IS NULL
+  AND datetime(createdAt) <= datetime('now', '-10 minutes');
+```
+
+PostgreSQL emergency SQL:
+
+```sql
+UPDATE "UserPasswordToken"
+SET
+  "revokedAt" = now(),
+  "revokedById" = NULL,
+  "updatedAt" = now()
+WHERE id = '<limbo-token-id>'
+  AND "activeKey" IS NULL
+  AND "usedAt" IS NULL
+  AND "revokedAt" IS NULL
+  AND "createdAt" <= now() - interval '10 minutes';
 ```
 
 수동 revoke 뒤 AuditLog를 반드시 남긴다. 현재 운영 DB 직접 정리 단계에서는 아래 필드를
@@ -172,7 +208,8 @@ AuditLog `afterJson` 최소 필드:
   "hadActiveKey": false,
   "hadUsedAt": false,
   "hadRevokedAt": false,
-  "operator": "<name-or-ticket-id>"
+  "operator": "<operator-name>",
+  "ticketId": "<ticket-id>"
 }
 ```
 
@@ -189,6 +226,8 @@ AuditLog `afterJson` 최소 필드:
 ## 릴리즈 게이트 적용
 
 릴리즈 후보 또는 credential delivery 장애 이후 release report에는 다음 evidence를 포함한다.
+artifact naming, JSON shape, reviewer checklist는
+`docs/60_release/credential-cleanup-release-evidence-template.md`를 따른다.
 
 | Gate              | Evidence                                                               |
 | ----------------- | ---------------------------------------------------------------------- |
@@ -199,6 +238,9 @@ AuditLog `afterJson` 최소 필드:
 | Receiver check    | delivery id/status만 확인했고 raw body/header를 저장하지 않았다는 확인 |
 
 수동 확인이 비어 있으면 `pnpm release:gate`가 통과해도 최종 릴리즈는 PASS로 판정하지 않는다.
+limbo token scan row count가 `0`이면 cleanup confirm과 AuditLog evidence는
+`N/A-NoRows`로 기록할 수 있다. row count가 `> 0`인데 cleanup confirm 또는 AuditLog
+evidence가 없으면 release readiness는 `BLOCK`이다.
 
 ## Validation Commands
 
@@ -221,6 +263,11 @@ pnpm release:gate
 이 runbook의 limbo token scan 또는 cleanup evidence가 비어 있으면 release readiness는
 BLOCK이다. `pnpm release:gate`가 통과해도 security/release reviewer가 수동 evidence를
 확인하기 전까지 Electron/production release 후보를 PASS로 올리지 않는다.
+
+PostgreSQL 운영 DB를 사용하는 release 후보는
+`docs/60_release/postgresql-credential-cleanup-rehearsal-profile.md`의 evidence도 PASS여야
+한다. SQLite-only Electron local release 후보는 해당 profile을 `N/A-SQLite-only`로 기록할
+수 있지만, PostgreSQL production readiness로 간주하지 않는다.
 
 ## 자동화 보류 조건
 

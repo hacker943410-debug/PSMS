@@ -1,6 +1,28 @@
 import type { CredentialTokenPurpose } from "@psms/shared";
+import type { Prisma } from "@psms/db";
 
 import type { DbClient } from "./types";
+
+export const credentialCompensationLimboTokenSelect = {
+  id: true,
+  userId: true,
+  purpose: true,
+  activeKey: true,
+  expiresAt: true,
+  usedAt: true,
+  revokedAt: true,
+  createdById: true,
+  revokedById: true,
+  ipAddress: true,
+  userAgent: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.UserPasswordTokenSelect;
+
+export type CredentialCompensationLimboToken =
+  Prisma.UserPasswordTokenGetPayload<{
+    select: typeof credentialCompensationLimboTokenSelect;
+  }>;
 
 export type UserPasswordTokenWithUser = Awaited<
   ReturnType<typeof findUserPasswordTokenByHash>
@@ -308,4 +330,52 @@ export function markUserPasswordTokenUsed(
       usedAt: input.usedAt,
     },
   });
+}
+
+export function findCredentialCompensationLimboTokens(
+  db: DbClient,
+  input: {
+    cutoffAt: Date;
+    tokenIds: string[];
+  }
+) {
+  return db.userPasswordToken.findMany({
+    where: buildCredentialCompensationLimboTokenWhere(input),
+    select: credentialCompensationLimboTokenSelect,
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+  });
+}
+
+export function revokeCredentialCompensationLimboTokens(
+  db: DbClient,
+  input: {
+    cutoffAt: Date;
+    tokenIds: string[];
+    revokedAt: Date;
+    revokedById: string | null;
+  }
+) {
+  return db.userPasswordToken.updateMany({
+    where: buildCredentialCompensationLimboTokenWhere(input),
+    data: {
+      activeKey: null,
+      revokedAt: input.revokedAt,
+      revokedById: input.revokedById,
+    },
+  });
+}
+
+function buildCredentialCompensationLimboTokenWhere(input: {
+  cutoffAt: Date;
+  tokenIds: string[];
+}): Prisma.UserPasswordTokenWhereInput {
+  return {
+    ...(input.tokenIds.length > 0 ? { id: { in: input.tokenIds } } : {}),
+    activeKey: null,
+    usedAt: null,
+    revokedAt: null,
+    createdAt: {
+      lte: input.cutoffAt,
+    },
+  };
 }
